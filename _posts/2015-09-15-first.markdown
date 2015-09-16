@@ -25,10 +25,10 @@ date:   2015-09-15 12:53:25
 Here is an example of AppleScript:
 Check out this neat program I wrote:
 
-{% highlight %}
-x = 0
-x = 2 + 2
-what is x
+{% highlight ruby%}
+def foo
+  puts 'foo'
+end
 {% endhighlight %}
 Roses ar red,  
 Violets are blue.
