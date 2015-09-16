@@ -23,12 +23,13 @@ date:   2015-09-15 12:53:25
 *   Blue
 
 Here is an example of AppleScript:
-```
-    require 'redcarpet'
-    markdown = Redcarpet.new("Hello World!")
-    puts markdown.to_html
-```
-    
+Check out this neat program I wrote:
+
+>> ```
+x = 0
+x = 2 + 2
+what is x
+>> ```
 Roses ar red,  
 Violets are blue.
 
