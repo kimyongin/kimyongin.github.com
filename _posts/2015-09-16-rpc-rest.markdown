@@ -94,3 +94,6 @@ Both SMTP and HTTP are valid application layer protocols used as transport for S
 ***
 SOAP은 security, routing등을 적용할수 있고, HTTP뿐만 아니라, SMTP, TCP등의 다른프로토콜 위에서 사용가능하다. 또한 언어독립적이기 때문에 다양한 프로그래밍에서 사용될수 있다. SOAP은 여러가지 전송방식중에 HTTP가 많이 사용되게 되었는데, 방화벽은 기본적으로 80포트를 열어놓기 때문이다. 단점은 XML을 사용하기 때문에 CORBA, ICE에 비해서 무겁다. 또한 SOAP프로토콜 자체가 복잡하고 무겁기 때문에, 결국 REST 아키텍쳐가 인기를 끌게 된다.
 
+<br>
+[wiki:CORBA](https://en.wikipedia.org/wiki/Common_Object_Request_Broker_Architecture)
+
