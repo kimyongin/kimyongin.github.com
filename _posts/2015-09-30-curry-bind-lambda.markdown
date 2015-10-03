@@ -1,6 +1,6 @@
 ---
 layout: post
-title: bind
+title: curry, bind, lambda
 date: 2015-09-16 12:53:25
 tags: cpp bind
 ---
