@@ -17,7 +17,10 @@ Currying이 뭐냐하면.. 2개의 파라미터를 받아야 하는 함수를 1�
 
 > f를 curry 하면 'y를 넣으면 z를 반환하는 **함수**'를 반환
 
+
 아래는 Scala에서 짝수를 구하는 예시이다. [링크](http://docs.scala-lang.org/ko/tutorials/tour/currying.html)
+
+`modN`은 2개의 파라미터를 받는 함수인데, currying해서 1개의 파라미터만 받는 함수로 만들어서 filter에 넘기고 있다.
 
 {% highlight java%}
 def filter(xs: List[Int], p: Int => Boolean): List[Int] =
@@ -111,7 +114,7 @@ bool between(int left, int right, int value)
 auto result = filter(list, binder2<std::function<bool(int, int, int)>, bool, int>(between, 3, 7));
 {% endhighlight %}
 
-binder1, binder2... 맘에 안든다.. 
+binder1, binder2... binder ??? 개수만큼 만들어야 하나?
 
 일반화 시킬수 없을까? 3과 7사이 이면서 짝수를 찾아보자.
 
@@ -142,3 +145,5 @@ bool between_and_mod(int left, int right, int denominator, int value)
 
 auto result = filter(list, binderN<std::function<bool(int, int, int, int)>, bool, int, int>(between_and_mod, 3, 7, 2));
 {% endhighlight %}
+
+어떻게 해야되지?? parameter pack 어떻게 쓰는건지 잘 모르겠다.. ㅠㅜ
