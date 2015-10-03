@@ -147,3 +147,58 @@ auto result = filter(list, binderN<std::function<bool(int, int, int, int)>, bool
 {% endhighlight %}
 
 어떻게 해야되지?? parameter pack 어떻게 쓰는건지 잘 모르겠다.. ㅠㅜ
+
+아래처럼 lambda를 이용해서도 할 수 있다.
+
+{% highlight cpp%}
+
+template <typename R, typename A, typename B>
+std::function<std::function<R(B)>(A)> curry(std::function<R(A, B)> func)
+{
+	return [=](A a)->std::function<R(B)>{
+		return [=](B b)->R{
+			return func(a, b);
+		};
+	};
+}
+
+template <typename R, typename A, typename B>
+std::function<R(A, B)> uncurry(std::function<std::function<R(B)>(A)> func)
+{
+	return[=](A a, B b)->R{
+		return func(a)(b);
+	};
+}
+
+template <typename R, typename A, typename B, typename C>
+std::function<std::function<R(C)>(A,B)> curry(std::function<R(A, B, C)> func)
+{
+	return [=](A a, B b)->std::function<R(C)>{
+		return [=](C c)->R{
+			return func(a, b, c);
+		};
+	};
+}
+
+template <typename R, typename A, typename B, typename C, typename D>
+std::function<std::function<R(D)>(A,B,C)> curry(std::function<R(A, B, C, D)> func)
+{
+	return [=](A a, B b, C c)->std::function<R(D)>{
+		return [=](D d)->R{
+			return func(a, b, c, d);
+		};
+	};
+}
+
+auto result11 = filter(list, curry<bool, int, int>(mod, 2));
+auto result21 = filter(list, curry<bool, int, int, int>(between, 3, 7));
+auto result32 = filter(list, curry<bool, int, int, int, int>(between_and_mod, 3, 7, 2));
+
+std::function<std::function<bool(int)>(int)> fnCurryMod = curry<bool, int, int>(mod);
+assert(fnCurryMod(2)(3) == false);
+
+std::function<bool(int,int)> fnUncurryMod = uncurry<bool, int, int>(fnCurryMod);
+assert(fnUncurryMod(2, 3) == false);
+
+{% endhighlight %}
+
