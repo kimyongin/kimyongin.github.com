@@ -2,7 +2,7 @@
 layout: post
 title: bind
 date: 2015-09-16 12:53:25
-tags: tcp/ip
+tags: cpp, bind
 ---
 
 Scala의 [Currying](https://en.wikipedia.org/wiki/Currying)을 CPP로 따라해보고 싶었다. 
@@ -10,15 +10,16 @@ Scala의 [Currying](https://en.wikipedia.org/wiki/Currying)을 CPP로 따라해�
 Currying이 뭐냐하면.. 2개의 파라미터를 받아야 하는 함수를 1개의 파라미터만 받아도 되는 새로운 함수로 만드는것? 이라고 설명할수 있을것 같다.
 
 `f:(x,y)->z` 
+
 > x,y를 넣으면 z라는 **값**을 반환
 
 `curry(f):x->(y-z)` 
+
 > f를 curry 하면 'y를 넣으면 z를 반환하는 **함수**'를 반환
 
-아래는 Scala에서 짝수를 구하는 예시이다.
-[링크](http://docs.scala-lang.org/ko/tutorials/tour/currying.html)
-`(modN(int, int))` `(p:Int=>Boolean)`
-```java
+아래는 Scala에서 짝수를 구하는 예시이다. [링크](http://docs.scala-lang.org/ko/tutorials/tour/currying.html)
+
+{% highlight java%}
 def filter(xs: List[Int], p: Int => Boolean): List[Int] =
     if (xs.isEmpty) xs
     else if (p(xs.head)) xs.head :: filter(xs.tail, p)
@@ -28,13 +29,13 @@ def modN(n: Int)(x: Int) = ((x % n) == 0)
 val nums = List(1, 2, 3, 4, 5, 6, 7, 8)
 
 println(filter(nums, modN(2)))
-```
+{% endhighlight %}
 
 이걸 CPP에서는 어떻게 할수 있을까?
 
 멤버를 가지고 있는 Function Object를 만들어서 하면 될거 같아서 만들어봤다.
 
-```cpp
+{% highlight cpp%}
 std::vector<int> list = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
 template<typename T, typename F>
@@ -48,9 +49,9 @@ T filter(T list, F f)
 	}
 	return result;
 }
-```
+{% endhighlight %}
 
-```cpp
+{% highlight cpp%}
 template<typename F, typename R, typename T>
 class binder1
 {
@@ -76,12 +77,11 @@ bool mod(int denominator, int value)
 
 // 2로 나눠서 나머지가 0
 auto result = filter(list, binder1<std::function<bool(int, int)>, bool, int>(mod, 2));
-```
+{% endhighlight %}
 
 그럼 between도 해보자.
 
-```cpp
-
+{% highlight cpp%}
 template<typename F, typename R, typename T>
 class binder2
 {
@@ -109,14 +109,13 @@ bool between(int left, int right, int value)
 
 // 3과 7사이
 auto result = filter(list, binder2<std::function<bool(int, int, int)>, bool, int>(between, 3, 7));
-```
+{% endhighlight %}
 
 binder1, binder2... 맘에 안든다.. 
 
 일반화 시킬수 없을까? 3과 7사이 이면서 짝수를 찾아보자.
 
-```cpp
-
+{% highlight cpp%}
 template<typename F, typename R, typename S, typename T>
 class binderN
 {
@@ -142,5 +141,4 @@ bool between_and_mod(int left, int right, int denominator, int value)
 }
 
 auto result = filter(list, binderN<std::function<bool(int, int, int, int)>, bool, int, int>(between_and_mod, 3, 7, 2));
-
-```
+{% endhighlight %}
