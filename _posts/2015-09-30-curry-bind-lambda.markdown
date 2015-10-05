@@ -1,8 +1,8 @@
 ---
 layout: post
-title: curry, bind, lambda
+title: cpp로 currying을 해보자.
 date: 2015-09-16 12:53:25
-tags: cpp bind
+tags: curry compose cpp bind lambda
 ---
 
 Scala의 [Currying](https://en.wikipedia.org/wiki/Currying)을 CPP로 따라해보고 싶었다. 
@@ -151,7 +151,6 @@ auto result = filter(list, binderN<std::function<bool(int, int, int, int)>, bool
 아래처럼 lambda를 이용해서도 할 수 있다.
 
 {% highlight cpp%}
-
 template <typename R, typename A, typename B>
 std::function<std::function<R(B)>(A)> curry(std::function<R(A, B)> func)
 {
@@ -199,6 +198,42 @@ assert(fnCurryMod(2)(3) == false);
 
 std::function<bool(int,int)> fnUncurryMod = uncurry<bool, int, int>(fnCurryMod);
 assert(fnUncurryMod(2, 3) == false);
-
 {% endhighlight %}
 
+이번에는 함수를 합성하는 compose를 해보자.
+
+{% highlight cpp%}
+int myPlus(int v1, int v2)
+{
+	return v1+v2;
+}
+
+int myInc(int v)
+{
+	return v+1;
+}
+
+template <typename R, typename A, typename B>
+std::function<R(A, B)> compose(std::function<R(A, B)> f1, std::function<R(R)> f2)
+{
+	return [=](A a, B b)->R{
+		return f2(f1(a, b));
+	};
+}
+
+template <typename R, typename A, typename B>
+std::function<R(A, B)> compose(std::function<R(A, B)> f1, std::function<R(R)> f2, std::function<R(R)> f3)
+{
+	return [=](A a, B b)->R{
+		return f3(f2(f1(a, b)));
+	};
+}
+
+auto pow_and_inc = compose<int, int, int>(myPlus, myInc);
+int ret1 = pow_and_inc(3, 3);
+assert(ret1 == 7);
+
+auto pow_and_inc_inc = compose<int, int, int>(myPlus, myInc, myInc);
+int ret2 = pow_and_inc_inc(3, 3);
+assert(ret2 == 8);
+{% endhighlight %}
