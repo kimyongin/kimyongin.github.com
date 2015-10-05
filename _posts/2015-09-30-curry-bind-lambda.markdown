@@ -1,6 +1,6 @@
 ---
 layout: post
-title: cpp로 currying을 해보자.
+title: "cpp로 currying을 해보자."
 date: 2015-09-16 12:53:25
 tags: curry compose cpp bind lambda
 ---
