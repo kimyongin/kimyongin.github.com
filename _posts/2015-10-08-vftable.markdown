@@ -1,0 +1,141 @@
+---
+layout: post
+title: "vftable"
+date: 2015-10-08 12:53:25
+tags: vftable
+---
+
+#### 가상함수가 있는 클래스가 메모리에 어떻게 올라가는지 확인해보자
+
+{% highlight cpp%}
+class ParentA
+{
+public:
+	ParentA() : m_Parent(0) {
+		std::cout << "Parent::Parent" << std::endl;
+	}
+	void Print() {
+		std::cout << "Parent::Print" << std::endl;
+	}
+private:
+	int m_Parent;
+};
+class ParentB
+{
+public:
+	ParentB() : m_Parent(0) {
+		std::cout << "Parent::Parent" << std::endl;
+	}
+	virtual void VPrint() {
+		std::cout << "Parent::VPrint" << std::endl;
+	}
+	void Print() {
+		std::cout << "Parent::Print" << std::endl;
+	}
+private:
+	int m_Parent;
+};
+{% endhighlight %}
+
+{% highlight cpp%}
+ParentA* parentA = new ParentA();
+ParentB* parentB1 = new ParentB();
+ParentB* parentB2 = new ParentB();
+parentB1->Print();
+parentB1->VPrint();
+{% endhighlight %}
+
+![Image of code01]({{ site.url }}/assets/vftable/code01.PNG)
+
+컴파일러는 클래스 멤버함수에 virtual이 붙어있으면, virtual function table(vftable)을 만들며, 인스턴스 `parentB1`, `parentB2`는 vftable의 주소(`0x00c5da7c`)를 가리키는 `__vfptr`을 가진다. (클래스당 하나의 vftable이 만들어지고, 인스턴스들의 `__vfptr`은 같은 vftable을 가리킨다.) 
+
+![Image of mem01]({{ site.url }}/assets/vftable/mem01.PNG)
+
+`__vfptr`은 인스턴스의 메모리상에서 맨앞에 위치한다. 위 그림을 보면 `parentB1`(`0x00af8738`)의 맨앞에 vftable(`0x00c5da7c`)의 주소를 가리키는 `__vfptr`이 위치함을 알수 있다.
+
+![Image of mem02]({{ site.url }}/assets/vftable/mem02.PNG)
+
+vftable(`0x00c5da7c`)에는 가상함수(`VPrint`)를 가리키는 주소(`0x00c51118`)가 존재한다.
+
+![Image of code01]({{ site.url }}/assets/vftable/draw01.PNG)
+
+<br>
+
+***************************************************
+***************************************************
+
+#### 가상함수가 어떻게 호출되는지 알아보자
+
+`parentB1->Print()`의 asm은 아래와 같다.
+{% highlight cpp %}
+mov         ecx,dword ptr [parentB1]  
+call        ParentB::Print (0C51230h) // Print함수를 곧바로 호출한다.
+{% endhighlight %}
+
+`parentB1->VPrint()`의 asm은 아래와 같다.
+{% highlight cpp %}
+mov         eax,dword ptr [parentB1]  // 1
+mov         edx,dword ptr [eax]       // 2
+mov         esi,esp                   
+mov         ecx,dword ptr [parentB1]   
+mov         eax,dword ptr [edx]       // 3
+call        eax                       // 4
+cmp         esi,esp  
+call        __RTC_CheckEsp (0C5134Dh)  
+{% endhighlight %}
+
+1. parentB1 주소(`0x00af8738`)를 eax에 넣는다.
+2. eax 주소(`0x00af8738`)에서 dword 크기만큼의 데이터(`0x00c5da7c`)를 edx에 넣는다.      
+- vftable의 주소를 edx에 넣는다.
+3. edx 주소(`0x00c5da7c`)에서 dword 크기만큼의 데이터(`0x00c51118`)를 eax에 넣는다.
+- vftable에서 첫번째 가상함수(`VPrint`)의 주소를 eax에 넣는다.
+4. eax를 호출한다.
+- `VPrint`를 호출한다.
+
+**둘의 차이는, 비가상함수는 곧바로 호출하고, 가상함수는 vftable을 통해서 호출을 한다는 것이다.**
+
+<br>
+
+***************************************************
+***************************************************
+
+#### 가상함수의 상속에 대해서 알아보자
+
+{% highlight cpp %}
+class Child : public ParentB
+{
+public:
+	Child() : m_Child(0) {
+		std::cout << "Child::Child" << std::endl;
+	}
+	virtual void VPrint() {
+		std::cout << "Child::VPrint" << std::endl;
+	}
+	void Print() {
+		std::cout << "Child::Print" << std::endl;
+	}
+private:
+	int m_Child;
+};
+{% endhighlight %}
+
+{% highlight cpp %}
+ParentB* parentB1 = new ParentB();
+ParentB* parentB2 = new Child();
+parentB2->VPrint();
+{% endhighlight %}
+
+모두가 알다시피 위 코드의 결과는 `"Child::VPrint"` 이다. 어떻게 그렇게 되는걸까?
+
+![Image of code01]({{ site.url }}/assets/vftable/code02.PNG)
+
+위 그림을 보면 알수 있듯이 `parentB1`의 vftable 주소(`0x00f3da6c`)와 `parentB2`의 vftable 주소(`0x00f3db38`)가 다름을 확인할수 있다. 이를 통해 `parentB2`는 `Parent` 클래스의 vftable을 사용하는게 아니라 `Child` 클래스의 vftable을 사용하는것을 알수 있고, 결론적으로 `parentB2`의 `VPrint`를 호출하게 되면 `Child::VPrint`가 호출되는 것이다.
+
+**`parentB2`의 `__vfptr`은 어떻게 Child 클래스의 vftable을 가리키게 된걸까?**
+이는 `Parent` 클래스의 생성자와 `Child` 클래스의 생성자에 브레이크를 걸고 보면 확인할수 있다.
+
+1. `Parent` 생성자가 호출된다.
+- `__vfptr`이 `Parent` 클래스의 vftable을 가리키고 있는다. 
+2. `Child` 생성자가 호출된다.
+- `__vfptr`을 `Child` 클래스의 vftable 주소로 덮어쓰게 된다.
+    
