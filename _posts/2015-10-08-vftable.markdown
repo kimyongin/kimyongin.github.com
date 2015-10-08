@@ -57,7 +57,7 @@ parentB1->VPrint();
 
 vftable(`0x00c5da7c`)에는 가상함수(`VPrint`)를 가리키는 주소(`0x00c51118`)가 존재한다.
 
-![Image of code01]({{ site.url }}/assets/vftable/draw01.PNG)
+![Image of code01]({{ site.url }}/assets/vftable/draw02.PNG)
 
 <br>
 
