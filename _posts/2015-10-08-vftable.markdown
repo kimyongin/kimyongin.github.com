@@ -139,3 +139,4 @@ parentB2->VPrint();
 2. `Child` 생성자가 호출된다.
 - `__vfptr`을 `Child` 클래스의 vftable 주소로 덮어쓰게 된다.
     
+![Image of code01]({{ site.url }}/assets/vftable/draw03.PNG)
