@@ -12,10 +12,10 @@ class ParentA
 {
 public:
 	ParentA() : m_Parent(0) {
-		std::cout << "Parent::Parent" << std::endl;
+		std::cout << "ParentA::ParentA" << std::endl;
 	}
 	void Print() {
-		std::cout << "Parent::Print" << std::endl;
+		std::cout << "ParentA::Print" << std::endl;
 	}
 private:
 	int m_Parent;
@@ -24,13 +24,13 @@ class ParentB
 {
 public:
 	ParentB() : m_Parent(0) {
-		std::cout << "Parent::Parent" << std::endl;
+		std::cout << "ParentB::ParentB" << std::endl;
 	}
 	virtual void VPrint() {
-		std::cout << "Parent::VPrint" << std::endl;
+		std::cout << "ParentB::VPrint" << std::endl;
 	}
 	void Print() {
-		std::cout << "Parent::Print" << std::endl;
+		std::cout << "ParentB::Print" << std::endl;
 	}
 private:
 	int m_Parent;
@@ -67,19 +67,19 @@ vftable(`0x00c5da7c`)에는 가상함수(`VPrint`)를 가리키는 주소(`0x00c
 #### 가상함수가 어떻게 호출되는지 알아보자
 
 `parentB1->Print()`의 asm은 아래와 같다.
-{% highlight cpp %}
+{% highlight xml %}
 mov         ecx,dword ptr [parentB1]  
 call        ParentB::Print (0C51230h) // Print함수를 곧바로 호출한다.
 {% endhighlight %}
 
 `parentB1->VPrint()`의 asm은 아래와 같다.
-{% highlight cpp %}
-mov         eax,dword ptr [parentB1]  // 1
-mov         edx,dword ptr [eax]       // 2
+{% highlight xml %}
+mov         eax,dword ptr [parentB1]  // (1)
+mov         edx,dword ptr [eax]       // (2)
 mov         esi,esp                   
 mov         ecx,dword ptr [parentB1]   
-mov         eax,dword ptr [edx]       // 3
-call        eax                       // 4
+mov         eax,dword ptr [edx]       // (3)
+call        eax                       // (4)
 cmp         esi,esp  
 call        __RTC_CheckEsp (0C5134Dh)  
 {% endhighlight %}
@@ -129,14 +129,184 @@ parentB2->VPrint();
 
 ![Image of code01]({{ site.url }}/assets/vftable/code02.PNG)
 
-위 그림을 보면 알수 있듯이 `parentB1`의 vftable 주소(`0x00f3da6c`)와 `parentB2`의 vftable 주소(`0x00f3db38`)가 다름을 확인할수 있다. 이를 통해 `parentB2`는 `Parent` 클래스의 vftable을 사용하는게 아니라 `Child` 클래스의 vftable을 사용하는것을 알수 있고, 결론적으로 `parentB2`의 `VPrint`를 호출하게 되면 `Child::VPrint`가 호출되는 것이다.
+위 그림을 보면 알수 있듯이 `parentB1`의 vftable 주소(`0x00f3da6c`)와 `parentB2`의 vftable 주소(`0x00f3db38`)가 다름을 확인할수 있다. 이를 통해 `parentB2`는 `ParentB` 클래스의 vftable을 사용하는게 아니라 `Child` 클래스의 vftable을 사용하는것을 알수 있고, 결론적으로 `parentB2`의 `VPrint`를 호출하게 되면 `Child::VPrint`가 호출되는 것이다.
 
-**`parentB2`의 `__vfptr`은 어떻게 Child 클래스의 vftable을 가리키게 된걸까?**
-이는 `Parent` 클래스의 생성자와 `Child` 클래스의 생성자에 브레이크를 걸고 보면 확인할수 있다.
+**`parentB2`의 `__vfptr`은 어떻게 `Child` 클래스의 vftable을 가리키게 된걸까?**
 
-1. `Parent` 생성자가 호출된다.
-- `__vfptr`이 `Parent` 클래스의 vftable을 가리키고 있는다. 
+이는 `ParentB` 클래스의 생성자와 `Child` 클래스의 생성자에 브레이크를 걸고 보면 확인할수 있다.
+
+1. `ParentB` 생성자가 호출된다.
+- `__vfptr`이 `ParentB` 클래스의 vftable을 가리키고 있는다. 
 2. `Child` 생성자가 호출된다.
 - `__vfptr`을 `Child` 클래스의 vftable 주소로 덮어쓰게 된다.
     
 ![Image of code01]({{ site.url }}/assets/vftable/draw03.PNG)
+
+<br>
+
+***************************************************
+***************************************************
+
+#### virtual 소멸자에 대해서 알아보자.
+
+{% highlight cpp%}
+class ParentB
+{
+public:
+	ParentB() : m_Parent(0) {}
+	virtual ~ParentB() {}
+private:
+	int m_Parent;
+};
+{% endhighlight %}
+
+{% highlight cpp%}
+int main()
+{
+
+    ParentB* parentB2 = new ParentB(); 
+    delete parentB2; 
+}
+{% endhighlight %}
+
+![Image of code01]({{ site.url }}/assets/vftable/code03.PNG)
+
+위 코드에서는 소멸자 `~ParentB()`에 virtual을 붙였다. 그런데 vftable을 보면 위에서 살펴본 `VPrint`랑은 뭔가 다르다, 이름이 `~ParentB`가 아니라 `vector deleting destructor`라는 이름으로 들어가 있다. 뭘까? 일단 asm 부터 살펴 보자.
+
+`delete parentB2`의 asm은 아래와 같다.
+{% highlight xml %}
+mov         eax,dword ptr [parentB2]  
+mov         dword ptr [ebp-0F0h],eax  
+mov         ecx,dword ptr [ebp-0F0h]  
+mov         dword ptr [ebp-0FCh],ecx  
+cmp         dword ptr [ebp-0FCh],0    
+je          wmain+0E9h (0B15169h)     
+mov         esi,esp  
+push        1  
+mov         edx,dword ptr [ebp-0FCh]  
+mov         eax,dword ptr [edx]       
+mov         ecx,dword ptr [ebp-0FCh]  
+mov         edx,dword ptr [eax]       
+call        edx                       // ParentB::vector deleting destructor 호출
+{% endhighlight %}
+
+위는 heap에 생성된 인스턴스를 해제하기 위한 `delete` 코드인데, `virtual VPrint`에서 이미 살펴본 것 처럼 vftable을 이용해서 `vector deleting desturctor`를 호출하고 있다.
+
+call edx 안으로 들어가보자.
+
+{% highlight xml %}
+ParentB::`vector deleting destructor':
+...
+call        ParentB::~ParentB  // 1. 소멸자 호출
+...
+call        operator delete    // 2. 메모리 반환
+...
+ret         4
+{% endhighlight %}
+
+위 내용을 보면 알수 있듯이.. 소멸자에 virtual이 붙어있으면 vftable에 `vector deleting destructor`가 추가되며, `vector deleting destructor` 안에서 소멸자(`~ParentB`)와 `delete`를 호출하게 된다.
+
+<br>
+
+***************************************************
+***************************************************
+
+#### 이어서, virtual 소멸자와 상속에 대해서 알아보자
+
+{% highlight cpp%}
+class ParentB
+{
+public:
+	ParentB() : m_Parent(0) {}
+	virtual ~ParentB() {}
+private:
+	int m_Parent;
+};
+class Child : public ParentB
+{
+public:
+	Child() : m_Child(0) {}
+	virtual ~Child() {}
+private:
+	int m_Child;
+};
+{% endhighlight %}
+
+{% highlight cpp%}
+int main()
+{
+	ParentB* child = new Child();
+	delete child;
+}
+{% endhighlight %}
+
+소멸자에 virtual이 붙어있는 `ParentB`를 상속받아서 `child`의 소멸이 어떻게 진행되는지 살펴보자. 아래코드는 `delete child`의 asm 이다.
+{% highlight xml %}
+mov         eax,dword ptr [child]  
+mov         dword ptr [ebp-0E0h],eax  
+mov         ecx,dword ptr [ebp-0E0h]  
+mov         dword ptr [ebp-0ECh],ecx  
+cmp         dword ptr [ebp-0ECh],0  
+je          wmain+0D9h (065A49h)  
+mov         esi,esp  
+push        1  
+mov         edx,dword ptr [ebp-0ECh]  
+mov         eax,dword ptr [edx]  
+mov         ecx,dword ptr [ebp-0ECh]  
+mov         edx,dword ptr [eax]  
+call        edx                        // (1) Child::vector deleting destructor 호출
+//////////////////////////////////////////////////////////////////
+Child::`vector deleting destructor':
+...
+call        Child::~Child  // (2)
+...
+call        operator delete  // (4)
+...
+ret         4  
+//////////////////////////////////////////////////////////////////
+virtual ~Child() 
+{
+... 
+}
+...
+call        ParentB::~ParentB  // (3)
+ret  
+{% endhighlight %}
+
+1. vftable을 통해서 Child::vector deleting destructor 호출
+2. ~Child 호출
+3. ~ParentB 호출
+4. delete 호출
+
+이번에는 `ParentB`의 소멸자에서 virtual을 빼고 다시 한번 `delete child`를 해보자.
+
+{% highlight xml %}
+	delete parentB2;
+ mov         eax,dword ptr [parentB2]  
+ mov         dword ptr [ebp-0E0h],eax  
+ mov         ecx,dword ptr [ebp-0E0h]  
+ mov         dword ptr [ebp-0ECh],ecx  
+ cmp         dword ptr [ebp-0ECh],0  
+ je          wmain+0C9h (09652C9h)  
+ push        1  
+ mov         ecx,dword ptr [ebp-0ECh]  
+ call        ParentB::`scalar deleting destructor' (0961541h)  // (1)
+ mov         dword ptr [ebp-10Ch],eax  
+ jmp         wmain+0D3h (09652D3h)  
+ mov         dword ptr [ebp-10Ch],0  
+{% endhighlight %}
+
+이번에는 `ParentB`의 `scalar deleting destructor`를 곧바로 호출(1)하게 되었다. 결과적으로 `Child`의 소멸자는 호출되지 않고, `ParentB`의 소멸자만 호출되게 되었다.
+
+결론을 내리면.. `delete`는 해당 인스턴스의 소멸자(ex. `~ParentB()`, `~Child()`)를 호출하는게 아니라, `destructor`를 호출하게 되어있고, `destructor`안에서 소멸자를 호출하게 된다. 이렇게 하는 이유는 생성자, 소멸자는 상속이 안되기 때문이다. 그래서 `destructor`를 만들어서 상속시키는 것이다.
+
+<br>
+
+***************************************************
+***************************************************
+
+원래 적고 싶었던건 CRTP(Curiously recurring template pattern)에 대해서 였다. CRTP를 사용하는 이유는 vftable을 이용해서 런타임에 동적으로 동작하는 방식은 성능에 나쁘기 때문에(주소연산이 많이 들어가니까), 템플릿을 이용해서 컴파일타임에 결정하기 위해서다.
+
+사실.. vftable이 어떻게 동작하는지 책에서만 봐서 그동안 "그런가보다.." 하면서 사용해왔는데, 이번기회에 디버깅 좀 해봤다. 덕분에 어셈블리도 조금 알게됬네. 하하하
+
+CRTP는 다음시간에 ㅎㅎ
