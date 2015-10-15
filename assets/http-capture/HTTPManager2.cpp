@@ -11,7 +11,7 @@ using namespace FTPC;
 using namespace FTPC::ErrorHandler;
 
 // ----------------------------------------------------------------------------------------
-// CHttpManager2 Å¬·¡½º 
+// CHttpManager2 í´ë˜ìŠ¤ 
 // ----------------------------------------------------------------------------------------
 CHttpManager2::CHttpManager2(LPCWSTR szServerAddr,
 	DWORD dwPort,
@@ -112,26 +112,26 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 {
 	DWORD errorCode = NO_ERROR;
 	boost::system::error_code ec;
-	ErrorHandler::ErrorHandlerFormat(_T("[%s - ÆÄÀÏ¼ö½Å½ÃÀÛ] %s"), _T(__FUNCTION__), lpszRemoteFilePath);
+	ErrorHandler::ErrorHandlerFormat(_T("[%s - íŒŒì¼ìˆ˜ì‹ ì‹œì‘] %s"), _T(__FUNCTION__), lpszRemoteFilePath);
 
 	std::string lpszRemoteFilePathAnsi, ansiServerAddr;
 	Common::StringEx::ToString(lpszRemoteFilePath, lpszRemoteFilePathAnsi);
 	Common::StringEx::ToString(m_strServerAddr, ansiServerAddr);
 
 	// ---------------------------------------------------
-	// ÆÄÀÏ¸íÀ¸·Î ¹ÂÅØ½º »ı¼º(»ç¿ëÁß »óÅÂ·Î ¸¸µé±â À§ÇØ¼­)
+	// íŒŒì¼ëª…ìœ¼ë¡œ ë®¤í…ìŠ¤ ìƒì„±(ì‚¬ìš©ì¤‘ ìƒíƒœë¡œ ë§Œë“¤ê¸° ìœ„í•´ì„œ)
 	// ---------------------------------------------------
 	std::wstring prefix = L"Global\\";
 	MutexScopedHandle hMutex(CreateMutex(NULL, TRUE, prefix.append(File::GetFileName(lpszLocalFilePath)).c_str()));
 	if (GetLastError() == ERROR_ALREADY_EXISTS){
-		//ÇØ´ç ÆÄÀÏÀÌ »ç¿ëÁßÀÌ¹Ç·Î ´ë±âÇÑ´Ù.
-		ErrorHandler::ErrorHandler(_T(__FUNCTION__), L"WaitForSingleObject", _T("ÆÄÀÏ»ç¿ë ´ë±â ½ÃÀÛ"));
+		//í•´ë‹¹ íŒŒì¼ì´ ì‚¬ìš©ì¤‘ì´ë¯€ë¡œ ëŒ€ê¸°í•œë‹¤.
+		ErrorHandler::ErrorHandler(_T(__FUNCTION__), L"WaitForSingleObject", _T("íŒŒì¼ì‚¬ìš© ëŒ€ê¸° ì‹œì‘"));
 		DWORD ret = WaitForSingleObject(hMutex, INFINITE);
 		ErrorHandler::ErrorHandler(_T(__FUNCTION__), L"WaitForSingleObject", ret);
 	}
 
 	// ---------------------------------------------------
-	// ÆÄÀÏÀ» ¿äÃ»ÇÑ´Ù.
+	// íŒŒì¼ì„ ìš”ì²­í•œë‹¤.
 	// ---------------------------------------------------
 	boost::asio::streambuf request;
 	std::ostream request_stream(&request);
@@ -142,7 +142,7 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 	boost::asio::write(m_socket, request);
 
 	// ---------------------------------------------------
-	// HTTP RESPONSE Çì´õ¸¦ ¼ö½Å¹Ş´Â´Ù.
+	// HTTP RESPONSE í—¤ë”ë¥¼ ìˆ˜ì‹ ë°›ëŠ”ë‹¤.
 	// ---------------------------------------------------
 	size_t headerSize = 0, currentSize = 0, readSize = 0;
 	boost::asio::streambuf readUntilData;
@@ -161,18 +161,18 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 		);
 
 	// ---------------------------------------------------
-	// HTTP RESPONSE Çì´õ¸¦ ÆÄ½ÌÇØ¼­ ¿ø°İÁöÆÄÀÏ »çÀÌÁî¸¦ ±¸ÇÑ´Ù.
+	// HTTP RESPONSE í—¤ë”ë¥¼ íŒŒì‹±í•´ì„œ ì›ê²©ì§€íŒŒì¼ ì‚¬ì´ì¦ˆë¥¼ êµ¬í•œë‹¤.
 	// ---------------------------------------------------
 	INT majorVersion, minorVersion, statusCode; INT64 nRemoteFileSize;
 	ParseHeaderData(responseHeader, majorVersion, minorVersion, statusCode, nRemoteFileSize);
 	if (nRemoteFileSize <= 0){
-		// ÆÄÀÏÀÌ Á¸ÀçÇÏÁö ¾Ê´Â´Ù.
-		ErrorHandler::ErrorHandlerFormat(_T("[%s - ºñ¾îÀÖ´ÂÆÄÀÏ] %s"), _T(__FUNCTION__), lpszRemoteFilePath);
+		// íŒŒì¼ì´ ì¡´ì¬í•˜ì§€ ì•ŠëŠ”ë‹¤.
+		ErrorHandler::ErrorHandlerFormat(_T("[%s - ë¹„ì–´ìˆëŠ”íŒŒì¼] %s"), _T(__FUNCTION__), lpszRemoteFilePath);
 		return ERROR_NO_MORE_FILES;
 	}
 
 	// ---------------------------------------------------
-	// ¿ø°İÁöÆÄÀÏ°ú ·ÎÄÃÆÄÀÏÀÇ »çÀÌÁî¸¦ ºñ±³ÇÑ´Ù.
+	// ì›ê²©ì§€íŒŒì¼ê³¼ ë¡œì»¬íŒŒì¼ì˜ ì‚¬ì´ì¦ˆë¥¼ ë¹„êµí•œë‹¤.
 	// ---------------------------------------------------
 	INT64 nLocalFileSize = 0, nTotalWrittenSize = 0;
 	BOOL bRet = File::GetFileSize(lpszLocalFilePath, nLocalFileSize);
@@ -180,12 +180,12 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 
 		if (m_fpProgress)
 			m_fpProgress(m_lpThis, nRemoteFileSize, nRemoteFileSize, lpszLocalFilePath);
-		ErrorHandler::ErrorHandlerFormat(_T("[%s - ÆÄÀÏ¼ö½ÅÃë¼Ò] %s"), _T(__FUNCTION__), lpszRemoteFilePath);
+		ErrorHandler::ErrorHandlerFormat(_T("[%s - íŒŒì¼ìˆ˜ì‹ ì·¨ì†Œ] %s"), _T(__FUNCTION__), lpszRemoteFilePath);
 		return NO_ERROR;
 	}
 
 	// --------------------------------------------------------
-	// ÆÄÀÏ »ı¼º
+	// íŒŒì¼ ìƒì„±
 	// --------------------------------------------------------
 	FileScopedHandle hLocalFile(File::FCreateFile(lpszLocalFilePath));
 	if (INVALID_HANDLE_VALUE == hLocalFile) {
@@ -195,33 +195,33 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 	}
 
 	// ---------------------------------------------------
-	// HTTP RESPONSE ¹Ùµğ¸¦ ¼ö½Å¹Ş´Â´Ù.
+	// HTTP RESPONSE ë°”ë””ë¥¼ ìˆ˜ì‹ ë°›ëŠ”ë‹¤.
 	// ---------------------------------------------------
 	DWORD writtenBufferLength = 0;
 	if (nRemoteFileSize > 0)
 	{
-		// ·ÎÄÃÆÄÀÏ¿¡ µ¥ÀÌÅÍ¸¦ ÀúÀåÇÑ´Ù.(Çì´õ ¼ö½ÅÇÒ¶§ ¹Ùµğ°¡ ÀÏºÎ ¼ö½ÅµÈ´Ù.)
+		// ë¡œì»¬íŒŒì¼ì— ë°ì´í„°ë¥¼ ì €ì¥í•œë‹¤.(í—¤ë” ìˆ˜ì‹ í• ë•Œ ë°”ë””ê°€ ì¼ë¶€ ìˆ˜ì‹ ëœë‹¤.)
 		if (!WriteFile(hLocalFile, &responseHeader[headerSize], currentSize - headerSize, &writtenBufferLength, NULL)){
 			errorCode = GetLastError();
 			ErrorHandler::ErrorHandler(_T(__FUNCTION__), L"WriteFile", errorCode);
 			return errorCode;
 		}
 
-		// ÀüÃ¼ Å©±â¸¦ ´©ÀûÇÑ´Ù.
+		// ì „ì²´ í¬ê¸°ë¥¼ ëˆ„ì í•œë‹¤.
 		nTotalWrittenSize += writtenBufferLength;
 	}
 
-	// ´õ ¹Ş¾Æ¾ßÇÒ ¹Ùµğ »çÀÌÁî¸¦ °è»êÇÑ´Ù.
+	// ë” ë°›ì•„ì•¼í•  ë°”ë”” ì‚¬ì´ì¦ˆë¥¼ ê³„ì‚°í•œë‹¤.
 	unsigned int remainSize = headerSize + nRemoteFileSize - currentSize;
 	if (remainSize > 0)
 	{
-		const unsigned int bufferSize = 10240;
+		const unsigned int bufferSize = 512;
 		char buffer[bufferSize];
 		int index = 0;
 		INT64 percent = nRemoteFileSize / (25 * bufferSize);
 		do
 		{
-			// ¿ø°İÁö µ¥ÀÌÅÍ¸¦ ÀĞ¾î¿Â´Ù.
+			// ì›ê²©ì§€ ë°ì´í„°ë¥¼ ì½ì–´ì˜¨ë‹¤.
 			memset(buffer, 0, bufferSize);
 			readSize = m_socket.read_some(boost::asio::buffer(buffer, bufferSize), ec);
 			std::string msg = ec.message();
@@ -231,17 +231,17 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 				return errorCode;
 			}
 
-			// ·ÎÄÃÆÄÀÏ¿¡ µ¥ÀÌÅÍ¸¦ ÀúÀåÇÑ´Ù.
+			// ë¡œì»¬íŒŒì¼ì— ë°ì´í„°ë¥¼ ì €ì¥í•œë‹¤.
 			if (!WriteFile(hLocalFile, buffer, readSize, &writtenBufferLength, NULL)){
 				errorCode = GetLastError();
 				ErrorHandler::ErrorHandler(_T(__FUNCTION__), L"WriteFile", errorCode);
 				return errorCode;
 			}
 
-			// ÀüÃ¼ Å©±â¸¦ ´©ÀûÇÑ´Ù.
+			// ì „ì²´ í¬ê¸°ë¥¼ ëˆ„ì í•œë‹¤.
 			nTotalWrittenSize += writtenBufferLength;
 
-			// Äİ¹éÀ» È£ÃâÇÑ´Ù.
+			// ì½œë°±ì„ í˜¸ì¶œí•œë‹¤.
 			if (percent == 0){
 				if (m_fpProgress)
 					m_fpProgress(m_lpThis, nTotalWrittenSize, nRemoteFileSize, lpszLocalFilePath);
@@ -254,18 +254,18 @@ DWORD CHttpManager2::DownloadFile(LPCTSTR lpszRemoteFilePath, LPCTSTR lpszLocalF
 		} while (readSize > 0);
 	}
 
-	// ¸¶Áö¸· Äİ¹éÀ» È£ÃâÇÑ´Ù.
+	// ë§ˆì§€ë§‰ ì½œë°±ì„ í˜¸ì¶œí•œë‹¤.
 	if (m_fpProgress)
 		m_fpProgress(m_lpThis, nTotalWrittenSize, nRemoteFileSize, lpszLocalFilePath);
 
 	// ---------------------------------------------------
-	// ¿ø°İÁöÆÄÀÏ°ú ·ÎÄÃÆÄÀÏÀÇ »çÀÌÁî¸¦ ºñ±³ÇÑ´Ù.
+	// ì›ê²©ì§€íŒŒì¼ê³¼ ë¡œì»¬íŒŒì¼ì˜ ì‚¬ì´ì¦ˆë¥¼ ë¹„êµí•œë‹¤.
 	// ---------------------------------------------------
 	if (nTotalWrittenSize == nRemoteFileSize && NO_ERROR == errorCode) {
-		ErrorHandler::ErrorHandlerFormat(_T("[%s - ÆÄÀÏ¼ö½Å¿Ï·á] %s(%I64d byte)"), _T(__FUNCTION__), lpszRemoteFilePath, nTotalWrittenSize);
+		ErrorHandler::ErrorHandlerFormat(_T("[%s - íŒŒì¼ìˆ˜ì‹ ì™„ë£Œ] %s(%I64d byte)"), _T(__FUNCTION__), lpszRemoteFilePath, nTotalWrittenSize);
 	}
 	else{
-		ErrorHandler::ErrorHandlerFormat(_T("[%s - ÆÄÀÏ¼ö½Å½ÇÆĞ] %s(%I64d byte)"), _T(__FUNCTION__), lpszRemoteFilePath, nTotalWrittenSize);
+		ErrorHandler::ErrorHandlerFormat(_T("[%s - íŒŒì¼ìˆ˜ì‹ ì‹¤íŒ¨] %s(%I64d byte)"), _T(__FUNCTION__), lpszRemoteFilePath, nTotalWrittenSize);
 		DeleteFile(lpszLocalFilePath);
 	}
 
