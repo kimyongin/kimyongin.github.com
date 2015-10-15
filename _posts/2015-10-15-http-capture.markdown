@@ -15,7 +15,7 @@ Apache/2.2.15 (CentOS) 에서 HTTP 프로토콜로 파일을 다운로드 받�
 
 #### 연결수립, HTTP요청, HTTP응답 수신 시작
 
-[![]({{ site.url }}/assets/http-capture/cap01.PNG)]({{ site.url }}/assets/http-capture/cap01.PNG)
+[![]({{ site.url }}/assets/http-capture/cap01.png)]({{ site.url }}/assets/http-capture/cap01.png)
 
 - 43 ~ 45 : TCP HandShaking 을 통한 연결수립
 - 46 : Client가 Server에게 파일을 요청하는 "Http Request" 전송 (1패킷으로 모두 전송 완료됨)
@@ -37,7 +37,7 @@ Apache/2.2.15 (CentOS) 에서 HTTP 프로토콜로 파일을 다운로드 받�
 
 #### Packet Loss
 
-[![]({{ site.url }}/assets/http-capture/cap02.PNG)]({{ site.url }}/assets/http-capture/cap02.PNG)
+[![]({{ site.url }}/assets/http-capture/cap02.png)]({{ site.url }}/assets/http-capture/cap02.png)
 
 - 150 : Server가 Client에게 Seq=88401 부터 Len=1300 크기만큼 전송
 - 151 : Server가 Client에게 Seq=91001(88401+1300+1300) 부터 Len=1300 크기만큼 전송 
@@ -54,7 +54,7 @@ Apache/2.2.15 (CentOS) 에서 HTTP 프로토콜로 파일을 다운로드 받�
 
 #### Packet Loss, Dup Ack
 
-[![]({{ site.url }}/assets/http-capture/cap03.PNG)]({{ site.url }}/assets/http-capture/cap03.PNG)
+[![]({{ site.url }}/assets/http-capture/cap03.png)]({{ site.url }}/assets/http-capture/cap03.png)
 
 - 948 : Client가 Server에게 Ack=566801을 보내달라고 응답
 - 949 : Server가 Client에게 Seq=568101(566801+1300) 부터 Len=1300 크기만큼 전송
@@ -72,7 +72,7 @@ Apache/2.2.15 (CentOS) 에서 HTTP 프로토콜로 파일을 다운로드 받�
 
 #### Packet Loss, Dup Ack, Fast Retransmission
 
-[![]({{ site.url }}/assets/http-capture/cap04.PNG)]({{ site.url }}/assets/http-capture/cap04.PNG)
+[![]({{ site.url }}/assets/http-capture/cap04.png)]({{ site.url }}/assets/http-capture/cap04.png)
 
 - 371123~371131 : Seq=46293948이 계속 지연되서 클라이언트가 서버에게 DUP ACK를 계속해서 보내고 있다. 
 - 371133 : 서버가 클라이언트에게 Seq=46293948를 빨리 재전송(Fast Retransmission)을 하고 있다.
@@ -84,15 +84,15 @@ Apache/2.2.15 (CentOS) 에서 HTTP 프로토콜로 파일을 다운로드 받�
 
 #### Window Size
 
-[![]({{ site.url }}/assets/http-capture/cap05.PNG)]({{ site.url }}/assets/http-capture/cap05.PNG)
+[![]({{ site.url }}/assets/http-capture/cap05.png)]({{ site.url }}/assets/http-capture/cap05.png)
 
 - 이제 파일다운로드를 99%정도 완료한 상태이다. 
 - (129680)~(1296899) : 클라이언트의 윈도우 사이즈가 점점 작아진다. 이는 클라이언트에서 수신받은 패킷에 대해서 응용프로그램에서 처리를 빨리 하지 않아서인듯 하다.
 - (129689)를 열어서 보면 아래처럼 윈도우 사이즈가 81까지 줄어들었다.
 
-[![]({{ site.url }}/assets/http-capture/cap06.PNG)]({{ site.url }}/assets/http-capture/cap06.PNG)
-[![]({{ site.url }}/assets/http-capture/cap07.PNG)]({{ site.url }}/assets/http-capture/cap07.PNG)
-[![]({{ site.url }}/assets/http-capture/cap08.PNG)]({{ site.url }}/assets/http-capture/cap08.PNG)
+[![]({{ site.url }}/assets/http-capture/cap06.png)]({{ site.url }}/assets/http-capture/cap06.png)
+[![]({{ site.url }}/assets/http-capture/cap07.png)]({{ site.url }}/assets/http-capture/cap07.png)
+[![]({{ site.url }}/assets/http-capture/cap08.png)]({{ site.url }}/assets/http-capture/cap08.png)
 
 시간이 흘러 응용프로그램에서 쌓여있는 패킷을 어느정도 처리하면,  (1296900), (1296901)에서 윈도우 사이즈가 늘어났음(TCP Window Update)을 서버로 전송한다.
 
