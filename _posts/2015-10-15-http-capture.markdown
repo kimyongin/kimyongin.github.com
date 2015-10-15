@@ -7,7 +7,8 @@ tags: http window wireshark
 
 Apache/2.2.15 (CentOS) 에서 HTTP 프로토콜로 파일을 다운로드 받는데, 간혹가다 99%에서 멈추는 현상이 발생한다. 그래서 와이어샤크로 캡처를 해서 분석 해보았다. (일반적인 내용들도 포함되어 있으니 적당히 생략해가면서 보길 바란다.)
 
-- 클라이언트 코드 : [링크]({{ site.url }}/assets/http-capture/HTTPManager2.cpp)
+- 클라이언트 코드1 : [BOOST ASIO 사용]({{ site.url }}/assets/http-capture/HTTPManager2.cpp)  
+- 클라이언트 코드2 : [WinINet 사용]({{ site.url }}/assets/http-capture/HTTPManager.cpp)
 - 192.168.246.31 : Client
 - 210.122.35.55 : Server
 
