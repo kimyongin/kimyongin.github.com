@@ -116,7 +116,7 @@ finished:
 	
 <br>
 
-#### - fileB.js에 있는 `Duktape.modSearch를 보자
+#### - fileB.js에 있는 `Duktape.modSearch`를 보자
 
 [How to use modules](http://wiki.duktape.org/HowtoModules.html)를 보면 아래와 같이 적혀있다.
 
