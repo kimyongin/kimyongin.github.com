@@ -125,3 +125,9 @@ finished:
 아무튼 module search 부분을 직접 만들어줘야 한다. 
 
 위 예제를 보면 `modSearch` 내부에서 `readFile`을 호출하고 있는데, 해당 함수는 내가 `hello.exe`에서 cpp로 구현한 `readFile` 함수를 호출해서 해당 플랫폼에 맞는 방식으로 파일을 읽어들여서 반환하게 된다.
+
+<br>
+
+ #### - 샘플은 아래 링크에 가서 받으세요
+ 
+ [https://github.com/kimyongin/ducktape_example](https://github.com/kimyongin/ducktape_example)
