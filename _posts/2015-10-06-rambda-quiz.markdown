@@ -1,43 +1,40 @@
 ---
 layout: post
-title: "rambda quiz : currying, compose"
+title: "rambda quiz : currying, compose (작성중)"
 date: 2015-10-06 12:53:25
 tags: rambda.js currying compose
 ---
 
-누군가가 currying, compose에 대한 [문제]((http://jsbin.com/jevag))를 냈다. rambda.js를 이용해서 풀면 된다.
+누군가가 currying, compose에 대한 [문제](http://jsbin.com/cisiju)를 냈다. <br>
+rambda.js에 대해서 먼저 알아보자. http://jsbin.com/cisiju/237/
 
-Curried functions are easy to compose. Using _.map, _.size, and _.split we can make a function that returns the lengths of the words in a string.
+#### [Documentation](http://ramdajs.com/0.18.0/docs)
 
-#### Example
+- inc
+  - Number -> Number
+  - Increments its argument.
+  - `R.inc(42); //=> 43`
+  
+> Number를 넣으면 Number가 나온다.
 
+- add
+  - Number -> Number -> Number
+  - Adds two numbers. Equivalent to a + b **but curried**.
+  - `R.add(2, 3); //=>  5`
+  - `R.add(7)(10); //=> 17`
+  
+> Number를 넣으면 Number를 넣었을때 Number가 나오는 함수를 반환한다. <br>
+> 다르게 표현하면 Number -> (Number -> Number) 로 표현할수도 있겠지?
+
+- all
 {% highlight javascript%}
-var _ = R;
-var lengths = _.compose(
-  _.map(_.size), _.split(' ')
-);
-console.log(lengths('once upon a time'));
-console.log(_.split(' ', 'once upon a time'));
+var lessThan2 = R.flip(R.lt)(2);
+var lessThan3 = R.flip(R.lt)(3);
+R.all(lessThan2)([1, 2]); //=> false
+R.all(lessThan3)([1, 2]); //=> true
 {% endhighlight %}
 
-#### Background Code
 
-{% highlight javascript%}
-var get = _.curry(function(x, obj) { return obj[x]; });
-function assertEqualArrays(x,y) {
-  if(x.length !== y.length)
-    throw("expected "+x+" to equal "+y);
-  for(var i in x) {
-    if(x[i] !== y[i]) {
-      throw("expected "+x+" to equal "+y);
-    }
-  }
-}
-function assertEqual(x,y){
-  if(x !== y)
-    throw("expected "+x+" to equal "+y);
-}
-{% endhighlight %}
 
 #### Data
 
