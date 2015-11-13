@@ -128,6 +128,6 @@ finished:
 
 <br>
 
- #### - 샘플은 아래 링크에 가서 받으세요
+#### - 샘플은 아래 링크에 가서 받으세요
  
- [https://github.com/kimyongin/ducktape_example](https://github.com/kimyongin/ducktape_example)
+[https://github.com/kimyongin/ducktape_example](https://github.com/kimyongin/ducktape_example)
