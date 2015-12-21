@@ -52,7 +52,7 @@ struct Accumulate<0>
 std::cout << Accumulate<100>::value << std::endl;
 {% endhighlight %}
 
-위 Accumulate의 value는 컴파일러에 의해 컴파일타임에 값이 결정 되어진다. 
+위 Accumulate의 value는 컴파일러에 의해 컴파일타임에 값이 결정 되어진다. (위 템플릿 코드는 컴파일러에 의해 재귀호출 된다는 뜻이다.)
 
 어떤가? 졸라 멋있지 않은가?
 
