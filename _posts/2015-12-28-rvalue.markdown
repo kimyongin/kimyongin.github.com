@@ -297,8 +297,8 @@ a가 가지고 있던 리소스는 결국 b가 스코프를 벗어날때 해제 
 {% highlight cpp %}
 X& X::operator=(X&& rhs)
 {
-  // 소멸자에서 문제가 없도록 리소스(오브젝트)를 정리한다.(그냥 둬도 상관없는 것들은 그냥 둔다.) 
-  // Move semantics: exchange content between this and rhs
+  // 1. 소멸자에서 문제가 없도록 리소스(오브젝트)를 정리한다.(그냥 둬도 상관없는 것들은 그냥 둔다.) 
+  // 2. Move semantics: exchange content between this and rhs
   return *this;
 }
 {% endhighlight %}
@@ -308,3 +308,135 @@ X& X::operator=(X&& rhs)
 ------------------------------------------------------------
 
 ### 05.Is an Rvalue Reference an Rvalue?
+
+이전처럼, X라는 클래스가 있고, copy constructor와 copy assignment operator에 대해서 rvalue에 대한 move semantics를 오버로드 했다고 가정하자
+{% highlight cpp %}
+void foo(X&& x)
+{
+  X anotherX = x;
+  // ...
+}
+{% endhighlight %}
+
+흥미로운 질문을 해보자 : 위 코드에서 어떤 copy constructor 오버로드가 호출될까? 
+여기서 x는 rvalue reference로 선언되어 있다. 따라서 rvalue 라고 예상이 가능하다. 
+
+하지만 rvalue reference의 설계자는 다음과 같은 방법을 선택하였다. : `rvalue reference로 선언된 것은 lvalue도 될수 있고,  rvalue도 될수 있다. 
+구별점은 이름을 가지고 있느냐? 이다. 만약 이름을 가지고 있다면 lvalue, 아니라면 rvalue 이다.`
+
+위의 예를 다시 보자. rvalue reference로 선언된 것이 이름(x)을 가지고 있다. 
+따라서 우리는 처음에는 rvalue라고 예상했지만, 설계자가 정한 방법에 따르면 x라는 이름을 가지고 있기 때문에 이것은 lvalue 이다.
+
+아래 예는 rvalue reference로 선언되었고 이름이 없는 것을 보여준다. 따라서 여기서는 rvalue 이다.
+{% highlight cpp %}
+X&& goo();
+X x = goo(); // calls X(X&& rhs) because the thing on the right hand side has no name
+{% endhighlight %}
+
+여기 디자인을 넘어서는 규칙이 있다고 가정해보자 :  `move semantics는 암묵적으로 이름을 가지고 있는것에 적용 될수 있다` 
+
+{% highlight cpp %}
+void foo(X&& x)
+{
+  X anotherX = x; // 암묵적으로 move 적용 
+  // x is still in scope!
+}
+{% endhighlight %}
+위 코드는 매우 헷갈리고, 에러를 발생시킬수 있다. 왜냐하면 우리는 move 시켜서 x의 리소스를 빼내서 anotherX에 넘겼지만, x라는 이름을 가지고 여전히 접근 가능하기 때문이다. move semantics는 이러한 문제가 생기지 않게 적용해야 했다. 그래서 `이름을 가지고 있으면 lvalue이다` 라는 규칙을 만들어낸 것이다.
+
+다른 측면은 어떠한가? `이름을 가지고 있지 않다면 rvalue이다?` goo 예제를 보자. 
+기술적으로 예제의 2번째 라인인 goo() 표현식은 move가 끝난뒤에도 여전히 접근가능한 어떤것을 참조하는 것이 가능하다.(*역자:어떻게 가능하지?*)
+다시 말하면, 여기에서도 앞의 암묵적 move 적용에서의 문제가 똑같이 발생 할 수 있다는 뜻이다.
+
+하지만 앞의 04.Forcing Move Semantics에서 보았듯이, 우리는 가끔은 그렇게 하기를 원한다. 
+강제로 lvalue에 move semantics를 할수 있기를 원한다는 뜻이다. 
+여기서 `이름이 없다면 rvalue 이다` 규칙은 통제된 방법으로 우리가 원하는 것을 할 수 있게 해준다. 이것이 std::move 함수이다.
+ 
+std::move는 매개변수를 reference로 전달한다. 그리고 반환결과 타입은 rvalue reference다. 
+따라서 `std::move(x)` 표현식은 rvalue reference로 선언되고 이름을 가지고 있지 않는다.
+다시 말하면, std::move는 매개변수가 rvalue가 아니더라도 rvalue로 바꿔주고, 이름을 숨길수 있게 해준다.(*역자:x는 아직 그대로 남아있는데 어떻게 이름이 숨겨진다는 거지?*)
+
+아래에 if-it-has-a-name 규칙을 이해하는 도움이 되는 예제가 있다. 
+
+Base 클래스를 작성한다고 가정하자, 그리고 Base의 copy constructor와 assignment의 move semantics 오버로딩을 가지고 있다.
+
+{% highlight cpp %}
+Base(Base const & rhs); // non-move semantics
+Base(Base&& rhs); // move semantics
+{% endhighlight %}
+
+이제 Base를 상속받은 Derived 클래스를 작성하자. 
+move semantics가 Derived 객체들에도 적용되게 하려면 Derived의 copy constructor와 assignment operator를 역시 move semantics를 오버로드 해야한다. 
+
+Derived의 copy constructor를 보자. lvalue 버전은 간단하다.
+{% highlight cpp %}
+Derived(Derived const & rhs) 
+  : Base(rhs)
+{
+  // Derived-specific stuff
+}
+{% endhighlight %}
+
+여기 if-it-has-a-name 룰을 모르는 rvalue 버전을 보자. 
+{% highlight cpp %}
+Derived(Derived&& rhs) 
+  : Base(rhs) // wrong: rhs is an lvalue
+{
+  // Derived-specific stuff
+}
+{% endhighlight %}
+
+우리가 만약 위처럼 코드를 작성 한다면, 
+Base copy constructor에서 non-moving 버전이 호출될 것이다. 
+왜냐하면 rhs는 이름을 가지고 있어서 lvalue 이기 때문이다. 
+우리가 호출되기를 원하는 것은 Base의 moving copy constructor 이다. 
+
+올바른 방법은 아래와 같다.
+{% highlight cpp %}
+Derived(Derived&& rhs) 
+  : Base(std::move(rhs)) // good, calls Base(Base&& rhs)
+{
+  // Derived-specific stuff
+}
+{% endhighlight %}
+
+<br>
+
+------------------------------------------------------------
+
+### 06.Move Semantics and Compiler Optimizations
+
+{% highlight cpp %}
+X foo()
+{
+  X x;
+  // perhaps do something to x
+  return x;
+}
+X retX = foo();
+{% endhighlight %}
+
+이전처럼 가정하자, X는 copy constructor와 copy assignment operator를 move semantics로 오버로드 한것을 가지고 있다. 
+당신이 함수 정의를 본다면, "여기서 값 복사가 일어나는군, x에서 foo의 리턴값의 위치로 말이야." 라고 생각할 수 있다. 
+그럼 우리는 값을 복사 하지 않고 이동을 시키기 위해 아래와 같이 작성 할 수 있다.
+
+{% highlight cpp %} 
+X foo()
+{
+  X x;
+  // perhaps do something to x
+  return std::move(x); // making it worse!
+}
+X retX = foo();
+{% endhighlight %}
+
+하지만 저러한 방법은 프로그램을 더 나쁘게 만든다. 모던 컴파일러는 원래의 함수 정의에 return value optimization을 적용할수 있다. 어떻게 적용하냐면, x를 로컬에 만들고 반환 할 때 retX에 복사하는 것이 아니라, 컴파일러가 x를 곧바로 foo의 리턴값을 저장할 retX에 만드는 것이다. 확실히 이것은 move semantics보다 낫다.
+
+보다시피, 정말 rvalue reference와 move semantics를 쓰고 싶다면, 현대의 컴파일러에 대한 이해가 필요하다. 
+이것에 대해 자세히 알고 싶으면 이펙티브 모던 C++의 항목 25,41을 봐라, 
+
+<br>
+
+------------------------------------------------------------
+
+### 07.Perfect Forwarding: The Problem
