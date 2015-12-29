@@ -1,0 +1,310 @@
+---
+layout: post
+title: "C++ Rvalue References Explained"
+date: 2015-12-28 09:53:25
+tags: cpp rvalue
+---
+
+
+[C++ Rvalue References Explained - Thomas Becker](http://thbecker.net/articles/rvalue_references/section_01.html#section_01)
+
+01. Introduction
+02. Move Semantics
+03. Rvalue References
+04. Forcing Move Semantics
+05. Is an Rvalue Reference an Rvalue?
+06. Move Semantics and Compiler Optimizations
+07. Perfect Forwarding: The Problem
+08. Perfect Forwarding: The Solution
+09. Rvalue References and Exceptions
+10. The Case of the Implicit Move
+11. Acknowledgments and Further Reading
+
+<br> 
+
+------------------------------------------------------------
+
+### 01.Introduction
+
+rvalue reference는 c++11 표준에 추가된 특징인데, 이것이 무엇인지 이해하기가 쉽지 않다.
+그래서, 이 문서에서는 rvalue가 무엇인지 설명하기 보다는 어떤 문제를 해결할수 있는지를 설명하려 한다.
+
+rvalue reference는 적어도 아래의 2가지 문제를 해결할수 있다.
+
+1. Implementing move semantics
+2. perfect forwarding 
+
+당신이 이 문제들에 대해서 익숙하지 않더라도 여기에서 설명 해줄테니 걱정하지 않아도 된다.
+
+우선 move semantics 부터 시작하겠다. 하지만 시작하기 전에 lvalue가 무엇인지, rvalue가 무엇인지 부터 상기시켜보자.
+정의는 굉장히 어렵다. 하지만 아래 설명이 이것을 이해하기 위한 목적에는 충분 할 것이다.
+
+C시절부터 있던 원래의 lvalue, rvalue 정의는 다음과 같다 : 
+
+- lvalue는 왼쪽에 오는 expression, 혹은 assignment의 오른쪽에 오는것을 말한다.
+- 반면, rvalue는 오로지 assignment의 오른쪽에만 올수 있는 것을 말한다.
+
+{% highlight cpp %}
+int a = 42;
+int b = 43;
+
+// a and b are both l-values:
+a = b; // ok
+b = a; // ok
+a = a * b; // ok
+
+// a * b is an rvalue:
+int c = a * b; // ok, rvalue on right hand side of assignment
+a * b = 42; // error, rvalue on left hand side of assignment
+{% endhighlight %}
+
+C++에서 과거에 사용하던 위와 같은 정의는 여전히 유효하다. 
+하지만 C++에서는 modifiability, assignability와 관련된 미묘한 것들로 인해 위와 같은 정의가 부정확해진다.
+
+대신 새로운 정의를 내려보자.(여전히 의견차이는 있겠지만..)
+
+- lvalue는 메모리위치를 참조할수 있고, & operator를 통해서 메모리주소를 구할수 있다.
+- rvalue는 lvalue가 아닌것 이다.
+
+{% highlight cpp %}
+// lvalues:
+//
+int i = 42;
+i = 43; // ok, i is an lvalue
+int* p = &i; // ok, i is an lvalue
+int& foo();
+foo() = 42; // ok, foo() is an lvalue
+int* p1 = &foo(); // ok, foo() is an lvalue
+
+// rvalues:
+//
+int foobar();
+int j = 0;
+j = foobar(); // ok, foobar() is an rvalue
+int* p2 = &foobar(); // error, cannot take the address of an rvalue
+j = 42; // ok, 42 is an rvalue
+{% endhighlight %}
+
+lvalue, rvalue에 대한 좀더 자세한 정의를 알고 싶다면 아래 링크를 추천한다.
+[http://accu.org/index.php/journals/227](http://accu.org/index.php/journals/227)
+
+<br>
+
+------------------------------------------------------------
+
+### 02.Move Semantics
+
+X를 어떤 리소스(m_pResource)에 대한 포인터나 핸들을 가지고 있는 클래스라고 가정하자. 
+X는 리소스 때문에 생성자, 복사생성자, 소멸자에 많은 노력을 기울여햐 한다.
+
+X의 copy assignment operator는 다음과 같다. (copy constructor 역시 비슷하다.)
+{% highlight cpp %}
+class X{
+    // [...]
+    Resource m_pResource;
+};
+X& X::operator=(X const & rhs)
+{
+  // [...]
+  // 1. this.m_pResource가 참조하고 있는 리소스를 해제한다. 
+  // 2. rhs.m_pResource가 참조하고 있는 리소스의 복사본을 만들어서 this.m_pResource에 넣는다. 
+  // [...]
+}
+{% endhighlight %}
+
+{% highlight cpp %}
+X foo();
+X x;
+// perhaps use x in various ways
+x = foo();
+{% endhighlight %}
+
+위 코드에서 마지막줄을 보자.
+
+- x가 가지고 있던 리소스가 해제된다.
+- foo가 반환한 temporary로 부터 리소스의 복사본을 만든다.
+- foo가 반환한 temporary이 해제되고, 동시에 temporary가 가지고 있던 리소스도 (소멸자에서)해제된다.
+
+이러한 방법보다는, x와 temporary가 리소스 포인터(혹은 핸들)을 서로 교환하고, 
+temporary의 소멸자에서 x가 원래 가지고 있던 리소스를 해제하는게 더 효과적이지 않을까?
+그렇다면, assignment의 오른쪽에 오는 것이 rvalue라면 copy assignment operator를 아래처럼 만들수도 있을것이다.
+{% highlight cpp %}
+X& X::operator=(X const & rhs);
+X& X::operator=(<mystery type> rhs)
+{
+  // [...]
+  // 1. this.m_pResource와 rhs.m_pResource를 교환한다.(swap) 
+  // [...]
+}
+{% endhighlight %}
+
+이것을 move semantics 라고 부른다. C++11에서는 이러한 동작을 위와 같이 오버로드를 통해서 만들어낼수 있다.
+이제 중요한건 `mystery type`이다. 우리는 `mystery type`이 확실히 참조로 넘어와야 하며, 
+lvalue인지, rvalue인지에 따라서 2개의 오버로드 중에 적절한 것을 선택해야 한다.   
+
+이제 위 코드의 `mystery type`을 `rvalue reference`로 바꿀 차례이다.
+
+<br>
+
+------------------------------------------------------------
+
+### 03.Rvalue References
+
+X가 어떤 타입이라고 했을때, X&&는 X의 rvalue reference라고 불리고, 일반적인 X&는 lvalue refrence라고 불린다.
+
+몇가지 예외적인 사항을 빼면 rvalue reference X&&는 lvalue refernece X&와 동작이 비슷하다.
+중요한건 오버로드 함수중에 무엇을 선택할지가 언제 결정되느냐? 이다.
+lvalue는 기존의 lvalue refernece를 호출해야 하고, rvalue는 새로운 rvalue reference를 호출해야 한다.
+그리고 이것은, 함수가 lvalue에 의해 호출되는지? rvalue에 의해 호출되는지? 에 따라서 컴파일 타임에 결정된다.
+
+{% highlight cpp %}
+void foo(X& x); // lvalue reference overload
+void foo(X&& x); // rvalue reference overload
+
+X x;
+X foobar();
+
+foo(x); // argument is lvalue: calls foo(X&)
+foo(foobar()); // argument is rvalue: calls foo(X&&)
+{% endhighlight %}
+
+이러한 방식으로 어떠한 함수도 오버로드가 가능하다. 
+하지만 대부분의 오버로드는 copy constructor와 assignment operator 에서 일어난다.
+
+아래는 move semantics를 구현한 것이다. (copy constructor 역시 비슷하다.)
+{% highlight cpp %}
+X& X::operator=(X const & rhs); // classical implementation
+X& X::operator=(X&& rhs)
+{
+  // Move semantics: exchange content between this and rhs
+  return *this;
+}
+{% endhighlight %}
+
+※ 주의사항 
+
+- 여기서 단순히 this와 rhs의 content를 swap 하는데, 사실 이것만으로는 충분하지 않다. 
+이 내용은 04.Forcing Move Semantics 에서 다시 살펴볼 것이다.
+
+※ 참고  
+
+- `void foo(X&);` 로 구현했다면 foo는 lvalue에 의해 호출된다.
+- `void foo(X const &);` 로 구현했다면 foo는 lvalue, rvalue에 의해 호출된다. 하지만 lvalue, rvalue를 구분하기가 불가능하다.
+- `void foo(X&&);` 로 구현해야지만 rvalue를 활용 가능하다.
+
+<br>
+
+------------------------------------------------------------
+
+### 04.Forcing Move Semantics
+
+C++11은 rvalue에 대해서만 move semantics를 허용하는 것은 아니다. 신중히 사용한다면 lvalue에 대해서도 잘 동작한다.
+이에 대한 좋은 예는 std::swap 이다. 
+
+X라는 클래스가 있고, copy constructor와 copy assignment operator에 대해서 rvalue에 대한 move semantics를 오버로드 했다고 하자
+
+{% highlight cpp %}
+template<class T>
+void swap(T& a, T& b) 
+{ 
+  T tmp(a);
+  a = b; 
+  b = tmp; 
+} 
+
+X a, b;
+swap(a, b);
+{% endhighlight %}
+
+위 코드에 rvalue는 존재하지 않는다. 그래서 swap은 move semantics를 사용하지 않는다. 
+
+하지만 우리는 다음과 같은 경우에는 move semantics가 좋다는 것을 알고 있다.
+
+- 변수가 copy 또는 assignment 의 소스이다. 
+- 변수가 다시 사용되지 않거나, 변수가 assignment의 타켓으로만 사용된다.(?)
+
+※ 참조
+
+ - `다시 사용되지 않는다`는 의미는 객체가 가지고 있는 리소스를 빼와도 된다는 뜻이다. 
+ - `assignment의 타켓으로 사용된다`는 의미 또한 현재 가지고 있는 리소스를 해제 해도 된다는 뜻이다.
+ - move semantics는 리소스를 복사하지 않고 이동하는 것을 의미한다. 이것을 염두하면 위의 말이 무슨 뜻인지 알 수 있다.  
+ - 만약 다시 사용해야 하는 객체의 리소스를 다른 객체의 리소스로 이동시키면 어떻게 될까? ok?
+ 
+C++11에서는 std::move를 활용하면 swap에서도 move semantics를 사용할수 있게 된다. 
+std::move는 매개변수를 rvalue로 바꿔주는 함수이다. 이로인해 swap은 다음과 같이 구현할수 있게 된다.
+
+{% highlight cpp %}
+template<class T> 
+void swap(T& a, T& b) 
+{ 
+  T tmp(std::move(a));
+  a = std::move(b); 
+  b = std::move(tmp);
+} 
+
+X a, b;
+swap(a, b);
+{% endhighlight %}
+
+만약 T가 move semantics를 copy constructor와 copy assignment operator를 오버로드 하지 않았다면,
+기존과 동일하게 (리소스를 이동이 아닌 복사하는 방식)동작할 것이다.
+
+std::move는 매우 단순한 함수이다. 하지만 아직은 당신에게 구현부를 보여줄수 없다. (조금만 기다려라)
+
+std::move는 다음과 같은 이점을 가지고 있다.
+
+- 많은 알고리즘과 오퍼레이션이 퍼포먼스를 위해 move semantics를 사용한다. 예를 들면 inplace 알고리즘을 들수 있다.
+- STL은 가끔 특정 타입의 경우 copyability를 요구한다. 예를 들면 컨테이너의 엘리먼트로 사용되는 타입들이다. 하지만 이를 조금만 더 자세히 들여다보면 copyability가 아니라 moveability 만으로도 충분한 경우가 있다.
+
+※ 참고
+
+아래는 inplace 알고리즘과 outplace 알고리즘의 예이다.
+{% highlight cpp %}
+function reverse_out_place(a[0..n - 1])
+     allocate b[0..n - 1]
+     for i from 0 to n - 1
+         b[n − 1 − i] := a[i]
+     return b
+     
+function reverse_in_place(a[0..n-1])
+     for i from 0 to floor((n-2)/2)
+         tmp := a[i]
+         a[i] := a[n − 1 − i]
+         a[n − 1 − i] := tmp
+{% endhighlight %}
+
+우리는 이제 std::move에 대해서 알았다. 
+이제 03.Rvalue References 에서 살펴보았던 아래 코드의 문제점을 다시 확인해볼 시간이 되었다.
+{% highlight cpp %}
+X& X::operator=(X&& rhs)
+{
+  // Move semantics: exchange content between this and rhs
+  return *this;
+}
+{% endhighlight %}
+
+`a = b` 를 보면 어떤 동작을 할것 이라고 예상되는가? a가 가지고 있던 리소스가  b가 가지고 있던 리소스로 복사되어 대체되는 것을 예상할수 있다. 
+그리고 복사를 하는 과정에서 a가 가지고 있던 리소스는 해제되는 것도 예상 할 수 있다. 
+
+`a = std::move(b)` 는 어떻게 동작할까? 만약 move semantics가 단순히 a와 b의 리소스를 교체하는 것으로 구현되어 있다면, 아직 아무것도 해제되지 않았다.
+a가 가지고 있던 리소스는 결국 b가 스코프를 벗어날때 해제 될 것 이다. 물론 b가 move의 타겟이 되어 다시 한번 a가 가지고 있던 리소스를 어딘가로 넘기지 않는다면 말이다.
+그래서 copy assignment operator의 구현을 조심하지 않는다면, a가 가지고 있던 리소스(오브젝트)는 언제 소멸될지 모르는 상태가 되게 된다.
+
+만약 소멸되지 않고 떠돌고 있는 리소스가 소멸이 되지 않아도 문제가 없는것이라면(메모리릭 제외) 괜찮겠지만, 
+예를 들어 해당 리소스의 소멸자에서 lock을 해제하는 코드가 있다면 이는 커다란 문제를 발생시킬수 있다. 
+그래서 copy assignment operator의 rvalue reference 오버로드는 다음처럼 신경써서 만들어야 한다.
+
+{% highlight cpp %}
+X& X::operator=(X&& rhs)
+{
+  // 소멸자에서 문제가 없도록 리소스(오브젝트)를 정리한다.(그냥 둬도 상관없는 것들은 그냥 둔다.) 
+  // Move semantics: exchange content between this and rhs
+  return *this;
+}
+{% endhighlight %}
+
+<br>
+
+------------------------------------------------------------
+
+### 05.Is an Rvalue Reference an Rvalue?
