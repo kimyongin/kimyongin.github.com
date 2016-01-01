@@ -20,26 +20,25 @@ tags: cpp rvalue
 10. The Case of the Implicit Move
 11. Acknowledgments and Further Reading
 
+※ 번역이 아닙니다. 공부하면서 내용을 추가 하고 빼면서 정리 해봤습니다.
+
 <br> 
 
+------------------------------------------------------------
 ------------------------------------------------------------
 
 ### 01.Introduction
 
 rvalue reference는 c++11 표준에 추가된 특징인데, 이것이 무엇인지 이해하기가 쉽지 않다.
-그래서, 이 문서에서는 rvalue가 무엇인지 설명하기 보다는 어떤 문제를 해결할수 있는지를 설명하려 한다.
-
+그래서, 이 문서에서는 rvalue가 무엇인지 설명하기 보다는 어떤 문제를 해결 할 수 있는지를 설명하려 한다.
 rvalue reference는 적어도 아래의 2가지 문제를 해결할수 있다.
 
-1. Implementing move semantics
-2. perfect forwarding 
+- Implementing move semantics
+- perfect forwarding 
 
-당신이 이 문제들에 대해서 익숙하지 않더라도 여기에서 설명 해줄테니 걱정하지 않아도 된다.
-
-우선 move semantics 부터 시작하겠다. 하지만 시작하기 전에 lvalue가 무엇인지, rvalue가 무엇인지 부터 상기시켜보자.
-정의는 굉장히 어렵다. 하지만 아래 설명이 이것을 이해하기 위한 목적에는 충분 할 것이다.
-
-C시절부터 있던 원래의 lvalue, rvalue 정의는 다음과 같다 : 
+아직 이 문제들에 대해서 익숙하지 않더라도 여기에서 설명 해줄테니 걱정하지 않아도 된다. 
+우선, 시작하기 전에 lvalue가 무엇인지?, rvalue가 무엇인지? 부터 상기시켜보자.
+C시절부터 있던 원래의 lvalue, rvalue 정의는 다음과 같다. 
 
 - lvalue는 왼쪽에 오는 expression, 혹은 assignment의 오른쪽에 오는것을 말한다.
 - 반면, rvalue는 오로지 assignment의 오른쪽에만 올수 있는 것을 말한다.
@@ -58,17 +57,14 @@ int c = a * b; // ok, rvalue on right hand side of assignment
 a * b = 42; // error, rvalue on left hand side of assignment
 {% endhighlight %}
 
-C++에서 과거에 사용하던 위와 같은 정의는 여전히 유효하다. 
-하지만 C++에서는 modifiability, assignability와 관련된 미묘한 것들로 인해 위와 같은 정의가 부정확해진다.
+위와 같은 정의는 C++에서 여전히 유효하지만 완벽하지 못하다.
+그래서 아래와 같은 새로운 정의를 내렸다.(의견차이는 있겠지만..)
 
-대신 새로운 정의를 내려보자.(여전히 의견차이는 있겠지만..)
-
-- lvalue는 메모리위치를 참조할수 있고, & operator를 통해서 메모리주소를 구할수 있다.
-- rvalue는 lvalue가 아닌것 이다.
+- lvalue는 메모리위치를 참조 할 수 있고, `&` operator를 통해서 메모리주소를 구할수 있다.
+- rvalue는 lvalue가 아닌 것 이다.
 
 {% highlight cpp %}
 // lvalues:
-//
 int i = 42;
 i = 43; // ok, i is an lvalue
 int* p = &i; // ok, i is an lvalue
@@ -77,7 +73,6 @@ foo() = 42; // ok, foo() is an lvalue
 int* p1 = &foo(); // ok, foo() is an lvalue
 
 // rvalues:
-//
 int foobar();
 int j = 0;
 j = foobar(); // ok, foobar() is an rvalue
@@ -91,23 +86,25 @@ lvalue, rvalue에 대한 좀더 자세한 정의를 알고 싶다면 아래 링�
 <br>
 
 ------------------------------------------------------------
+------------------------------------------------------------
 
 ### 02.Move Semantics
 
 X를 어떤 리소스(m_pResource)에 대한 포인터나 핸들을 가지고 있는 클래스라고 가정하자. 
-X는 리소스 때문에 생성자, 복사생성자, 소멸자에 많은 노력을 기울여햐 한다.
+알다시피, X는 리소스를 관리하기 위해 생성자, 복사생성자, 소멸자를 작성하는데 있어서 많은 노력을 기울여야 한다.
+X의 copy assignment operator는 아래와 같다. (copy constructor 역시 비슷하다.)
 
-X의 copy assignment operator는 다음과 같다. (copy constructor 역시 비슷하다.)
 {% highlight cpp %}
 class X{
     // [...]
-    Resource m_pResource;
+    Resource* m_pResource;
 };
 X& X::operator=(X const & rhs)
 {
   // [...]
   // 1. this.m_pResource가 참조하고 있는 리소스를 해제한다. 
-  // 2. rhs.m_pResource가 참조하고 있는 리소스의 복사본을 만들어서 this.m_pResource에 넣는다. 
+  // 2. rhs.m_pResource가 참조하고 있는 리소스의 복사본을 만든다.
+  // 3. 복사본의 주소를 this.m_pResource에 넣는다. 
   // [...]
 }
 {% endhighlight %}
@@ -119,15 +116,18 @@ X x;
 x = foo();
 {% endhighlight %}
 
-위 코드에서 마지막줄을 보자.
+위 코드에서 마지막줄 `x = foo();` 은 아래와 같이 동작한다.
 
-- x가 가지고 있던 리소스가 해제된다.
-- foo가 반환한 temporary로 부터 리소스의 복사본을 만든다.
-- foo가 반환한 temporary이 해제되고, 동시에 temporary가 가지고 있던 리소스도 (소멸자에서)해제된다.
+1. foo() 함수가 결과를 임시객체(rvalue)에 담아 반환 한다.
+2. `=` operator에 의해 copy assignment operator가 호출된다.
+    1. x가 가지고 있던 리소스를 해제한다.
+    2. 임시객체로 부터 리소스의 복사본을 만든다.
+    3. 복사본을 x의 리소스에 넣는다.
+3. 임시객체가 해제되고, 동시에 임시객체가 가지고 있던 리소스도 (소멸자에서)해제 된다.
 
-이러한 방법보다는, x와 temporary가 리소스 포인터(혹은 핸들)을 서로 교환하고, 
-temporary의 소멸자에서 x가 원래 가지고 있던 리소스를 해제하는게 더 효과적이지 않을까?
-그렇다면, assignment의 오른쪽에 오는 것이 rvalue라면 copy assignment operator를 아래처럼 만들수도 있을것이다.
+이러한 방법 보다는, x와 임시객체가 리소스 포인터(혹은 핸들)를 서로 교환하고, 
+임시객체의 소멸자에서 x가 원래 가지고 있던 리소스를 해제하는게 더 효과적이지 않을까?
+그렇다면, assignment의 오른쪽에 오는 것이 **rvalue라면** copy assignment operator를 아래처럼 만들수도 있을것 이다.
 {% highlight cpp %}
 X& X::operator=(X const & rhs);
 X& X::operator=(<mystery type> rhs)
@@ -138,24 +138,32 @@ X& X::operator=(<mystery type> rhs)
 }
 {% endhighlight %}
 
-이것을 move semantics 라고 부른다. C++11에서는 이러한 동작을 위와 같이 오버로드를 통해서 만들어낼수 있다.
-이제 중요한건 `mystery type`이다. 우리는 `mystery type`이 확실히 참조로 넘어와야 하며, 
-lvalue인지, rvalue인지에 따라서 2개의 오버로드 중에 적절한 것을 선택해야 한다.   
+이제 `x = foo();`는 아래와 같이 동작하게 된다.
 
-이제 위 코드의 `mystery type`을 `rvalue reference`로 바꿀 차례이다.
+1. foo() 함수가 결과를 반환하기 위해 임시객체(rvalue)를 생성한다.
+2. `=` operator에 의해 mystery type assignment operator가 호출된다.
+    1. x와 임시객체의 리소스를 교환한다.
+3. 임시객체가 해제되고, 동시에 임시객체가 가지고 있던 x의 리소스도 (소멸자에서)해제 된다.
+
+결과적으로 복사본 생성 1회, 리소스 해제 1회의 비용을 줄일수 있는 효율적인 코드가 가능해졌다.
+C++11에서는 이것을 **move semantics** 라고 부르며, 이러한 동작을 위와 같이 오버로드를 통해서 만들어낼수 있다.
+그렇다면 `mystery type`은 무엇일까? 위와 같이 동작 할 수 있는 `mystery type`의 조건을 생각해보자.
+
+- rvalue 이어야 한다.
+- reference로 넘어와야 한다.
+
+위 조건에 따르면 `mystery type`은 rvalue reference 이다. 그리고 C++11 에서는 `rvalue reference`를 `&`를 2개 붙여서 `X&&` 라고 표시한다.
 
 <br>
 
 ------------------------------------------------------------
+------------------------------------------------------------
 
 ### 03.Rvalue References
 
-X가 어떤 타입이라고 했을때, X&&는 X의 rvalue reference라고 불리고, 일반적인 X&는 lvalue refrence라고 불린다.
-
-몇가지 예외적인 사항을 빼면 rvalue reference X&&는 lvalue refernece X&와 동작이 비슷하다.
-중요한건 오버로드 함수중에 무엇을 선택할지가 언제 결정되느냐? 이다.
-lvalue는 기존의 lvalue refernece를 호출해야 하고, rvalue는 새로운 rvalue reference를 호출해야 한다.
-그리고 이것은, 함수가 lvalue에 의해 호출되는지? rvalue에 의해 호출되는지? 에 따라서 컴파일 타임에 결정된다.
+X가 어떤 타입이라고 했을때, X&&는 X의 rvalue reference라고 불리고, X&는 lvalue refrence라고 불린다.
+lvalue는 기존의 lvalue refernece를 호출해야 하고, rvalue는 move semantics가 구현된 rvalue reference를 호출해야 한다.
+그리고, 오버로드 함수중에 무엇을 호출할지는, lvalue에 의해 호출되는지? rvalue에 의해 호출되는지? 에 따라서 컴파일 타임에 결정된다.
 
 {% highlight cpp %}
 void foo(X& x); // lvalue reference overload
@@ -169,9 +177,9 @@ foo(foobar()); // argument is rvalue: calls foo(X&&)
 {% endhighlight %}
 
 이러한 방식으로 어떠한 함수도 오버로드가 가능하다. 
-하지만 대부분의 오버로드는 copy constructor와 assignment operator 에서 일어난다.
-
+하지만 대부분의 오버로드는 copy constructor와 assignment operator 에서 구현된다.
 아래는 move semantics를 구현한 것이다. (copy constructor 역시 비슷하다.)
+
 {% highlight cpp %}
 X& X::operator=(X const & rhs); // classical implementation
 X& X::operator=(X&& rhs)
@@ -195,13 +203,14 @@ X& X::operator=(X&& rhs)
 <br>
 
 ------------------------------------------------------------
+------------------------------------------------------------
 
 ### 04.Forcing Move Semantics
 
 C++11은 rvalue에 대해서만 move semantics를 허용하는 것은 아니다. 신중히 사용한다면 lvalue에 대해서도 잘 동작한다.
-이에 대한 좋은 예는 std::swap 이다. 
+이에 대한 좋은 예는 swap 이다. 
 
-X라는 클래스가 있고, copy constructor와 copy assignment operator에 대해서 rvalue에 대한 move semantics를 오버로드 했다고 하자
+X라는 클래스가 있고, copy constructor와 copy assignment operator에 대해서 move semantics를 오버로드 했다고 하자
 
 {% highlight cpp %}
 template<class T>
@@ -216,22 +225,11 @@ X a, b;
 swap(a, b);
 {% endhighlight %}
 
-위 코드에 rvalue는 존재하지 않는다. 그래서 swap은 move semantics를 사용하지 않는다. 
+위 코드에 rvalue는 존재하지 않는다. 그래서 대입이나 복사할때 move semantics 오버로드 버전이 호출되지 않는다. 
+하지만 보다시피, 위 swap 함수의 목적은 객체간의 리소스 교환이기 때문에, move semantics 오버로드 버전을 호출하면 더 효율적 이다. 어떻게 해야할까? 
 
-하지만 우리는 다음과 같은 경우에는 move semantics가 좋다는 것을 알고 있다.
-
-- 변수가 copy 또는 assignment 의 소스이다. 
-- 변수가 다시 사용되지 않거나, 변수가 assignment의 타켓으로만 사용된다.(?)
-
-※ 참조
-
- - `다시 사용되지 않는다`는 의미는 객체가 가지고 있는 리소스를 빼와도 된다는 뜻이다. 
- - `assignment의 타켓으로 사용된다`는 의미 또한 현재 가지고 있는 리소스를 해제 해도 된다는 뜻이다.
- - move semantics는 리소스를 복사하지 않고 이동하는 것을 의미한다. 이것을 염두하면 위의 말이 무슨 뜻인지 알 수 있다.  
- - 만약 다시 사용해야 하는 객체의 리소스를 다른 객체의 리소스로 이동시키면 어떻게 될까? ok?
- 
-C++11에서는 std::move를 활용하면 swap에서도 move semantics를 사용할수 있게 된다. 
-std::move는 매개변수를 rvalue로 바꿔주는 함수이다. 이로인해 swap은 다음과 같이 구현할수 있게 된다.
+이를 위해, C++11에서는 std::move 라는 함수를 제공 한다. 
+std::move는 매개변수를 rvalue로 바꿔주는 함수이다. 이제 swap은 다음과 같이 구현할수 있게 된다.
 
 {% highlight cpp %}
 template<class T> 
@@ -246,15 +244,19 @@ X a, b;
 swap(a, b);
 {% endhighlight %}
 
-만약 T가 move semantics를 copy constructor와 copy assignment operator를 오버로드 하지 않았다면,
-기존과 동일하게 (리소스를 이동이 아닌 복사하는 방식)동작할 것이다.
+※ 주의사항
 
-std::move는 매우 단순한 함수이다. 하지만 아직은 당신에게 구현부를 보여줄수 없다. (조금만 기다려라)
+- std::move를 사용할때는 주의할 점이 있다. 위 swap함수의 구현부를 보면 알수 있듯이, 
+한번 move의 매개변수로 사용된 객체는 assignement 식의 타겟으로만 사용되고 있다.
+왜냐하면 move하고 나면 가지고 있던 리소스가 이동되기 때문이다. 따라서, move를 사용할때는 더이상 사용하지 않을 객체인 경우에만 사용해야 한다. 
+- 만약 T가 move semantics를 copy constructor와 copy assignment operator에 오버로드 하지 않았다면,
+기존과 동일하게 lvalue reference 버전이 (리소스를 이동이 아닌 복사하는 방식) 호출 될 것이다. 
 
 std::move는 다음과 같은 이점을 가지고 있다.
 
 - 많은 알고리즘과 오퍼레이션이 퍼포먼스를 위해 move semantics를 사용한다. 예를 들면 inplace 알고리즘을 들수 있다.
-- STL은 가끔 특정 타입의 경우 copyability를 요구한다. 예를 들면 컨테이너의 엘리먼트로 사용되는 타입들이다. 하지만 이를 조금만 더 자세히 들여다보면 copyability가 아니라 moveability 만으로도 충분한 경우가 있다.
+- STL은 가끔 특정 타입의 경우 copyability를 요구한다. 예를 들면 컨테이너의 엘리먼트로 사용되는 타입들이다. 
+하지만 이를 조금만 더 자세히 들여다보면 copyability가 아니라 moveability 만으로도 충분한 경우가 있다.
 
 ※ 참고
 
@@ -287,10 +289,10 @@ X& X::operator=(X&& rhs)
 그리고 복사를 하는 과정에서 a가 가지고 있던 리소스는 해제되는 것도 예상 할 수 있다. 
 
 `a = std::move(b)` 는 어떻게 동작할까? 만약 move semantics가 단순히 a와 b의 리소스를 교체하는 것으로 구현되어 있다면, 아직 아무것도 해제되지 않았다.
-a가 가지고 있던 리소스는 결국 b가 스코프를 벗어날때 해제 될 것 이다. 물론 b가 move의 타겟이 되어 다시 한번 a가 가지고 있던 리소스를 어딘가로 넘기지 않는다면 말이다.
-그래서 copy assignment operator의 구현을 조심하지 않는다면, a가 가지고 있던 리소스(오브젝트)는 언제 소멸될지 모르는 상태가 되게 된다.
+a가 가지고 있던 리소스는 결국 b가 스코프를 벗어날때 해제 될 것 이다. 물론 b가 move의 매개변수로 넘어가서 다시 한번 a가 가지고 있던 리소스를 어딘가로 넘기지 않는다면 말이다.
+그래서 move semantics의 구현을 조심하지 않는다면, a가 가지고 있던 리소스(오브젝트)가 언제 소멸될지 모르는 상태가 될수도 있다.
 
-만약 소멸되지 않고 떠돌고 있는 리소스가 소멸이 되지 않아도 문제가 없는것이라면(메모리릭 제외) 괜찮겠지만, 
+만약 소멸되지 않고 떠돌고 있는 리소스가 사실은 소멸이 되지 않아도 문제가 없는 것 이라면(메모리릭 제외) 괜찮겠지만, 
 예를 들어 해당 리소스의 소멸자에서 lock을 해제하는 코드가 있다면 이는 커다란 문제를 발생시킬수 있다. 
 그래서 copy assignment operator의 rvalue reference 오버로드는 다음처럼 신경써서 만들어야 한다.
 
@@ -303,8 +305,11 @@ X& X::operator=(X&& rhs)
 }
 {% endhighlight %}
 
+그런데 std::move는 어떻게 구현되어 있을까? 아직 구현부를 보기에는 이르니, 조금만 더 참고 공부해 보자. 
+
 <br>
 
+------------------------------------------------------------
 ------------------------------------------------------------
 
 ### 05.Is an Rvalue Reference an Rvalue?
@@ -318,14 +323,15 @@ void foo(X&& x)
 }
 {% endhighlight %}
 
-흥미로운 질문을 해보자 : 위 코드에서 어떤 copy constructor 오버로드가 호출될까? 
+위 코드에서 어떤 copy constructor 오버로드가 호출될까? 
 여기서 x는 rvalue reference로 선언되어 있다. 따라서 rvalue 라고 예상이 가능하다. 
+하지만 rvalue reference의 설계자는 다음과 같은 방법을 선택하였다 
 
-하지만 rvalue reference의 설계자는 다음과 같은 방법을 선택하였다. : `rvalue reference로 선언된 것은 lvalue도 될수 있고,  rvalue도 될수 있다. 
-구별점은 이름을 가지고 있느냐? 이다. 만약 이름을 가지고 있다면 lvalue, 아니라면 rvalue 이다.`
+- `rvalue reference로 선언된 것은 lvalue도 될수 있고,  rvalue도 될수 있다. 
+구별점은 이름을 가지고 있느냐? 이다. 만약 이름을 가지고 있다면 lvalue, 이름을 가지고 있지 않다면 rvalue 이다.`
 
 위의 예를 다시 보자. rvalue reference로 선언된 것이 이름(x)을 가지고 있다. 
-따라서 우리는 처음에는 rvalue라고 예상했지만, 설계자가 정한 방법에 따르면 x라는 이름을 가지고 있기 때문에 이것은 lvalue 이다.
+따라서 우리는 처음에는 rvalue라고 예상했지만, 설계자가 정한 방법에 따르면 이것은 x라는 이름을 가지고 있기 때문에 이것은 lvalue 이다.
 
 아래 예는 rvalue reference로 선언되었고 이름이 없는 것을 보여준다. 따라서 여기서는 rvalue 이다.
 {% highlight cpp %}
@@ -333,7 +339,9 @@ X&& goo();
 X x = goo(); // calls X(X&& rhs) because the thing on the right hand side has no name
 {% endhighlight %}
 
-여기 디자인을 넘어서는 규칙이 있다고 가정해보자 :  `move semantics는 암묵적으로 이름을 가지고 있는것에 적용 될수 있다` 
+여기 디자인을 넘어서는 다음과 같은 규칙이 있다고 가정 해보자.(실제로는 아니다.)
+
+- `move semantics는 암묵적으로 이름을 가지고 있는것에 적용 될수 있다` 
 
 {% highlight cpp %}
 void foo(X&& x)
@@ -342,21 +350,17 @@ void foo(X&& x)
   // x is still in scope!
 }
 {% endhighlight %}
-위 코드는 매우 헷갈리고, 에러를 발생시킬수 있다. 왜냐하면 우리는 move 시켜서 x의 리소스를 빼내서 anotherX에 넘겼지만, x라는 이름을 가지고 여전히 접근 가능하기 때문이다. move semantics는 이러한 문제가 생기지 않게 적용해야 했다. 그래서 `이름을 가지고 있으면 lvalue이다` 라는 규칙을 만들어낸 것이다.
-
-다른 측면은 어떠한가? `이름을 가지고 있지 않다면 rvalue이다?` goo 예제를 보자. 
-기술적으로 예제의 2번째 라인인 goo() 표현식은 move가 끝난뒤에도 여전히 접근가능한 어떤것을 참조하는 것이 가능하다.(*역자:어떻게 가능하지?*)
-다시 말하면, 여기에서도 앞의 암묵적 move 적용에서의 문제가 똑같이 발생 할 수 있다는 뜻이다.
-
-하지만 앞의 04.Forcing Move Semantics에서 보았듯이, 우리는 가끔은 그렇게 하기를 원한다. 
-강제로 lvalue에 move semantics를 할수 있기를 원한다는 뜻이다. 
-여기서 `이름이 없다면 rvalue 이다` 규칙은 통제된 방법으로 우리가 원하는 것을 할 수 있게 해준다. 이것이 std::move 함수이다.
+위 코드는 매우 헷갈리고, 에러를 발생시킬수 있다. 왜냐하면 우리는 move 시켜서 x의 리소스를 빼내서 anotherX에 넘겼지만, 
+x라는 이름을 가지고 여전히 접근 가능하기 때문이다. 이러한 이유 때문에, 명시적으로 std::move를 사용해야지만 move semantics 오버로드 버전이 호출 되도록 `이름을 가지고 있으면 lvalue이다` 라는 규칙을 만들어낸 것이다. 
  
-std::move는 매개변수를 reference로 전달한다. 그리고 반환결과 타입은 rvalue reference다. 
-따라서 `std::move(x)` 표현식은 rvalue reference로 선언되고 이름을 가지고 있지 않는다.
-다시 말하면, std::move는 매개변수가 rvalue가 아니더라도 rvalue로 바꿔주고, 이름을 숨길수 있게 해준다.(*역자:x는 아직 그대로 남아있는데 어떻게 이름이 숨겨진다는 거지?*)
+이제 std::move에 대해서 `rvalue로 바꿔준다` 외에 `이름을 숨겨준다` 라는 특징을 추가할 수 있게 되었다. 
+(참조할수 있는 이름이 없다는게 rvalue의 정의이긴 하지만..)
 
-아래에 if-it-has-a-name 규칙을 이해하는 도움이 되는 예제가 있다. 
+------------------------------------------------------------
+
+<br>
+
+아래에 if-it-has-a-name 규칙을 이해하는데 도움이 되는 예제가 있다. 
 
 Base 클래스를 작성한다고 가정하자, 그리고 Base의 copy constructor와 assignment의 move semantics 오버로딩을 가지고 있다.
 
@@ -377,7 +381,7 @@ Derived(Derived const & rhs)
 }
 {% endhighlight %}
 
-여기 if-it-has-a-name 룰을 모르는 rvalue 버전을 보자. 
+여기 if-it-has-a-name 규칙을 모르는 rvalue 버전을 보자. 
 {% highlight cpp %}
 Derived(Derived&& rhs) 
   : Base(rhs) // wrong: rhs is an lvalue
@@ -403,6 +407,7 @@ Derived(Derived&& rhs)
 <br>
 
 ------------------------------------------------------------
+------------------------------------------------------------
 
 ### 06.Move Semantics and Compiler Optimizations
 
@@ -418,7 +423,7 @@ X retX = foo();
 
 이전처럼 가정하자, X는 copy constructor와 copy assignment operator를 move semantics로 오버로드 한것을 가지고 있다. 
 당신이 함수 정의를 본다면, "여기서 값 복사가 일어나는군, x에서 foo의 리턴값의 위치로 말이야." 라고 생각할 수 있다. 
-그럼 우리는 값을 복사 하지 않고 이동을 시키기 위해 아래와 같이 작성 할 수 있다.
+그럼 우리는 std::move를 배웠기 때문에, 값을 복사 하지 않고 이동을 시키기 위해 아래와 같이 작성 할 수 있다.
 
 {% highlight cpp %} 
 X foo()
@@ -430,13 +435,253 @@ X foo()
 X retX = foo();
 {% endhighlight %}
 
-하지만 저러한 방법은 프로그램을 더 나쁘게 만든다. 모던 컴파일러는 원래의 함수 정의에 return value optimization을 적용할수 있다. 어떻게 적용하냐면, x를 로컬에 만들고 반환 할 때 retX에 복사하는 것이 아니라, 컴파일러가 x를 곧바로 foo의 리턴값을 저장할 retX에 만드는 것이다. 확실히 이것은 move semantics보다 낫다.
+하지만 저러한 방법은 프로그램을 더 나쁘게 만든다. 모던 컴파일러는 원래의 함수 정의에 return value optimization을 적용할수 있다. 
+어떻게 적용하냐면, x를 로컬에 만들고 반환 할 때 retX에 복사하는 것이 아니라, 컴파일러가 x를 곧바로 foo의 리턴값을 저장할 retX에 만드는 것이다. 
+그리고, 이러한 방법이 move semantics보다 확실히 낫다.
 
-보다시피, 정말 rvalue reference와 move semantics를 쓰고 싶다면, 현대의 컴파일러에 대한 이해가 필요하다. 
+보다시피, 정말 rvalue reference와 move semantics를 쓰고 싶다면, 모던 컴파일러에 대한 이해가 필요하다. 
 이것에 대해 자세히 알고 싶으면 이펙티브 모던 C++의 항목 25,41을 봐라, 
 
 <br>
 
 ------------------------------------------------------------
+------------------------------------------------------------
 
 ### 07.Perfect Forwarding: The Problem
+
+남은 문제는 perfect forwarding 문제다. 아래의 간단한 factory 함수를 보자.
+
+{% highlight cpp %} 
+template<typename T, typename Arg> 
+shared_ptr<T> factory(Arg arg)
+{ 
+  return shared_ptr<T>(new T(arg));
+}
+{% endhighlight %} 
+
+명백하게, 이 코드의 의도는 매개변수 arg를 factory 함수로부터 T의 생성자로 전달하는 것이다. 
+이상적으로는 factory 함수를 사용하지 않거나, 클라이언트코드에서 직접 생성자를 호출하거나 매개변수 arg가 완벽하게 전달되어야(perfect forwarding) 하지만, 
+위 코드는 그렇지 않다. 
+
+아래코드를 보면, 개발자의 의도는 X의 생성자에 a1의 객체를 그대로 참조로 넘기려고 했으나, 
+factory 함수가 call by value로 호출 되면서 a1의 참조가 아닌, factory 함수 스택에 새로 생성된 a의 참조가 넘어가는 문제가 생기는 것이다. 
+
+{% highlight cpp %}
+A a1;
+factory<X>(a1);
+
+shared_ptr<X> factory(A a) // 여기서 call by value로 호출된다.
+{
+  return shared_ptr<X>(new X(a)); // X(A& a); a를 참조로 넘기려 한다.       
+}
+{% endhighlight %} 
+
+위를 해결하기 위해, 아래 코드에서는 템플릿 매개변수 타입을 Arg에서 Arg&로 바꾸었다. 
+하지만, 이렇게 바꾸면 factory 함수는 rvalue에 의해 호출 될 수 없는 문제가 있다.
+{% highlight cpp %} 
+template<typename T, typename Arg> 
+shared_ptr<T> factory(Arg& arg)
+{ 
+  return shared_ptr<T>(new T(arg));
+} 
+factory<X>(hoo()); // error if hoo returns by value
+factory<X>(41); // error
+{% endhighlight %} 
+
+다시 한번 위 문제를 해결하기 위해, 아래와 같이 const를 붙여서 해결 하였다.
+{% highlight cpp %} 
+template<typename T, typename Arg> 
+shared_ptr<T> factory(Arg const & arg)
+{ 
+  return shared_ptr<T>(new T(arg));
+} 
+{% endhighlight %} 
+
+하지만 위와 같은 접근은 2가지 문제가 있다. 
+
+1. factory 함수가 하나가 아니라 여러개의 매개변수를 갖는다면, 
+모든 non-const, const reference에 대한 조합을 오버로드 해야한다. 
+
+2. 이러한 전달은 완벽하지 못하다. 왜냐하면 move semantics를 차단하기 때문이다. 
+arg가 lvalue이기 때문에 move semantics가 절대로 불가능하다. 
+
+여기서 rvalue reference가 위 2가지 문제를 푸는데 사용 될 수 있다. 
+이제 rvalue reference의 if-it-has-a-name 규칙 다음으로, 2가지 규칙을 더 살펴보자.
+
+※ 요약 : perfect forwarding 문제란? : reference를 온전하게 전달하지 못하는 문제를 말한다.
+
+<br>
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+### 08.Perfect Forwarding: The Solution
+
+if-it-has-a-name 규칙을 제외하고 남은 2개의 rvalue reference 규칙중에 첫번째는 `reference 축약 규칙`이다.
+
+- A& & becomes A&
+- A& && becomes A&
+- A&& & becomes A&
+- A&& && becomes A&&
+
+두번째는, rvalue reference를 템플릿 매개변수로 취하기 위한 특별한 `템플릿 매개변수 추론 규칙`이다.
+ 
+{% highlight cpp %} 
+template<typename T>
+void foo(T&&);
+{% endhighlight %} 
+
+위 코드는 아래처럼 적용된다.
+
+- foo가 타입 A의 lavlue로 호출될때, T는 A& , 매개변수 타입은 A&가 된다.
+- foo가 타입 A의 rvalue로 호출될때, T는 A  , 매개변수 타입은 A&&가 된다.
+
+이러한 2가지 규칙을 감안하면, 07.Perfect Forwarding: The Problem에서 살펴본 perfect forwarding 문제를 rvalue reference를 이용해서 풀 수 있게 된다. 
+
+아래에 Perfect Forwarding 문제의 해결방법을 보여주겠다.
+{% highlight cpp %}
+template<typename T, typename Arg> 
+shared_ptr<T> factory(Arg&& arg)
+{ 
+  return shared_ptr<T>(new T(std::forward<Arg>(arg)));
+} 
+
+template<class S>
+S&& std::forward(typename remove_reference<S>::type& a) noexcept
+{
+  return static_cast<S&&>(a);
+}
+{% endhighlight %} 
+
+위의 perfect forwarding이 어떻게 동작하는지 보기위해, factory 함수를 lvalue로 호출 했을때 와 rvalue로 호출 했을때로 나눠서 살펴볼 것이다. 
+
+------------------------------------------------------------
+
+<br>
+
+**1.우선은, `factory<A>`가 타입X의 lvalue로 호출 될 때를 살펴보자**
+{% highlight cpp %}
+X x;
+factory<A>(x);
+{% endhighlight %} 
+
+우선 `템플릿 추론 규칙`에 의해, factory의 Arg는 X&로, 매개변수 타입은 X&로 추론된다.
+{% highlight cpp %}
+shared_ptr<A> factory(X& && arg)
+{ 
+  return shared_ptr<A>(new A(std::forward<X&>(arg)));
+} 
+
+X& && forward(remove_reference<X&>::type& a) noexcept
+{
+  return static_cast<X& &&>(a);
+} 
+{% endhighlight %} 
+
+여기에 `reference 축약 규칙`을 적용하면 아래와 같이 되고, 드디어 lvalue를 온전하게 A의 생성자에 reference로 넘길수 있게 되었다. 
+{% highlight cpp %}
+shared_ptr<A> factory(X& arg)
+{ 
+  return shared_ptr<A>(new A(std::forward<X&>(arg)));
+} 
+
+X& std::forward(X& a) 
+{
+  return static_cast<X&>(a);
+} 
+{% endhighlight %} 
+
+------------------------------------------------------------
+
+<br>
+
+**2.이번에는, `factory<A>`가 타입X의 rvalue로 호출 될 때를 살펴보자**
+{% highlight cpp %}
+X foo();
+factory<A>(foo());
+{% endhighlight %}
+
+우선 `템플릿 추론 규칙`에 의해, factory의 Arg는 X로, 매개변수 타입은 X&&로 추론된다.
+{% highlight cpp %}
+shared_ptr<A> factory(X&& && arg)
+{ 
+  return shared_ptr<A>(new A(std::forward<X>(arg)));
+} 
+
+X&& forward(remove_reference<X>::type& a) noexcept
+{
+  return static_cast<X&&>(a);
+} 
+{% endhighlight %} 
+
+여기에 `reference 축약 규칙`을 적용하면 아래와 같이 되고, 드디어 rvalue를 온전하게 A의 생성자에 reference로 넘길수 있게 되었다.
+게다가 A의 생성자로 전달되는 매개변수식은 rvalaue reference로 선언되어 있고 이름을 가지고 있지 않기 때문에, 규칙에 따라 rvalue 이다.
+이것은 move semantics가 보장된다는 의미이다. 
+{% highlight cpp %}
+shared_ptr<A> factory(X&& arg)
+{ 
+  return shared_ptr<A>(new A(std::forward<X>(arg)));
+} 
+
+X&& forward(X& a) noexcept
+{
+  return static_cast<X&&>(a);
+} 
+{% endhighlight %} 
+ 
+------------------------------------------------------------
+
+<br>
+ 
+축하한다. 드디어 std::move의 구현부를 볼수 있는 시간이 왔다. 
+std::move는 매개변수로 받은것을 reference로 똑바로 넘기는 것이다. 
+
+{% highlight cpp %}
+template<class T> 
+typename remove_reference<T>::type&& std::move(T&& a) noexcept
+{
+  typedef typename remove_reference<T>::type&& RvalRef;
+  return static_cast<RvalRef>(a);
+} 
+{% endhighlight %} 
+
+std::move를 X 타입의 lvalue에 의해 호출한다고 가정해보자.
+{% highlight cpp %}
+X x;
+std::move(x);
+
+// 1. 템플릿 추론 규칙 적용 
+typename remove_reference<X&>::type&& std::move(X& && a) noexcept
+{
+  typedef typename remove_reference<X&>::type&& RvalRef;
+  return static_cast<RvalRef>(a);
+} 
+
+// 2. reference 축약 규칙 적용
+X&& std::move(X& a) noexcept
+{
+  return static_cast<X&&>(a);
+} 
+{% endhighlight %} 
+
+std::move를 X 타입의 rvalue에 의해 호출한다고 가정해보자.
+{% highlight cpp %}
+X hoo();
+std::move(hoo());
+
+// 1. 템플릿 추론 규칙 적용 
+typename remove_reference<X&&>::type&& std::move(X&& a) noexcept
+{
+  typedef typename remove_reference<X&&>::type&& RvalRef;
+  return static_cast<RvalRef>(a);
+} 
+
+// 2. reference 축약 규칙 적용
+X&& std::move(X&& a) noexcept
+{
+  return static_cast<X&&>(a);
+} 
+{% endhighlight %} 
+
+위 코드를 보면 알수 있듯이, 결국엔 static_cast<X&&>(x)를 호출한다. 그런데 굳이 std::move를 사용하는 이유는 
+std::move가 좀더 expressive 하기 때문이다.
