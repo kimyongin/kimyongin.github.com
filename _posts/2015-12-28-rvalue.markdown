@@ -178,7 +178,6 @@ foo(foobar()); // argument is rvalue: calls foo(X&&)
 
 이러한 방식으로 어떠한 함수도 오버로드가 가능하다. 
 하지만 대부분의 오버로드는 copy constructor와 assignment operator 에서 구현된다.
-아래는 move semantics를 구현한 것이다. (copy constructor 역시 비슷하다.)
 
 {% highlight cpp %}
 X& X::operator=(X const & rhs); // classical implementation
@@ -305,7 +304,7 @@ X& X::operator=(X&& rhs)
 }
 {% endhighlight %}
 
-그런데 std::move는 어떻게 구현되어 있을까? 아직 구현부를 보기에는 이르니, 조금만 더 참고 공부해 보자. 
+이번장에서는 std::move에 대해서 알아보았다. 그런데 std::move는 어떻게 구현되어 있을까? 아직 구현부를 보기에는 이르니, 조금만 더 참고 공부해 보자. 
 
 <br>
 
