@@ -92,7 +92,7 @@ lvalue, rvalue에 대한 좀더 자세한 정의를 알고 싶다면 아래 링�
 
 X를 어떤 리소스(m_pResource)에 대한 포인터나 핸들을 가지고 있는 클래스라고 가정하자. 
 알다시피, X는 리소스를 관리하기 위해 생성자, 복사생성자, 소멸자를 작성하는데 있어서 많은 노력을 기울여야 한다.
-X의 copy assignment operator는 아래와 같다. (copy constructor 역시 비슷하다.)
+어떤 리소스를 관리하는 타입X의 copy assignment operator는 아래와 같다. (copy constructor 역시 비슷하다.)
 
 {% highlight cpp %}
 class X{
@@ -162,8 +162,8 @@ C++11에서는 이것을 **move semantics** 라고 부르며, 이러한 동작�
 ### 03.Rvalue References
 
 X가 어떤 타입이라고 했을때, X&&는 X의 rvalue reference라고 불리고, X&는 lvalue refrence라고 불린다.
-lvalue는 기존의 lvalue refernece를 호출해야 하고, rvalue는 move semantics가 구현된 rvalue reference를 호출해야 한다.
-그리고, 오버로드 함수중에 무엇을 호출할지는, lvalue에 의해 호출되는지? rvalue에 의해 호출되는지? 에 따라서 컴파일 타임에 결정된다.
+lvalue는 기존의 lvalue refernece를 호출해야 하고, rvalue는 move semantics가 구현된 rvalue reference를 호출해야 하는데,
+오버로드 함수중에 무엇을 호출할지는 lvalue에 의해 호출되는지? rvalue에 의해 호출되는지? 에 따라서 컴파일 타임에 결정된다.
 
 {% highlight cpp %}
 void foo(X& x); // lvalue reference overload
@@ -304,7 +304,7 @@ X& X::operator=(X&& rhs)
 }
 {% endhighlight %}
 
-이번장에서는 std::move에 대해서 알아보았다. 그런데 std::move는 어떻게 구현되어 있을까? 아직 구현부를 보기에는 이르니, 조금만 더 참고 공부해 보자. 
+이번장에서는 std::move에 대해서 알아보았다. 그런데 std::move는 어떻게 구현되어 있을까? 구현부를 보기에는 아직 이르니, 조금만 더 참고 공부해 보자. 
 
 <br>
 
@@ -359,7 +359,7 @@ x라는 이름을 가지고 여전히 접근 가능하기 때문이다. 이러�
 
 <br>
 
-아래에 if-it-has-a-name 규칙을 이해하는데 도움이 되는 예제가 있다. 
+아래에 `if-it-has-a-name` 규칙을 이해하는데 도움이 되는 예제가 있다. 
 
 Base 클래스를 작성한다고 가정하자, 그리고 Base의 copy constructor와 assignment의 move semantics 오버로딩을 가지고 있다.
 
@@ -380,7 +380,7 @@ Derived(Derived const & rhs)
 }
 {% endhighlight %}
 
-여기 if-it-has-a-name 규칙을 모르는 rvalue 버전을 보자. 
+여기 `if-it-has-a-name` 규칙을 모르는 rvalue 버전을 보자. 
 {% highlight cpp %}
 Derived(Derived&& rhs) 
   : Base(rhs) // wrong: rhs is an lvalue
@@ -476,7 +476,7 @@ shared_ptr<X> factory(A a) // 여기서 call by value로 호출된다.
 {% endhighlight %} 
 
 위를 해결하기 위해, 아래 코드에서는 템플릿 매개변수 타입을 Arg에서 Arg&로 바꾸었다. 
-하지만, 이렇게 바꾸면 factory 함수는 rvalue에 의해 호출 될 수 없는 문제가 있다.
+하지만 아직 완벽하지 않다. rvalue에 의해 호출 될 수 없기 때문이다.
 {% highlight cpp %} 
 template<typename T, typename Arg> 
 shared_ptr<T> factory(Arg& arg)
@@ -487,7 +487,7 @@ factory<X>(hoo()); // error if hoo returns by value
 factory<X>(41); // error
 {% endhighlight %} 
 
-다시 한번 위 문제를 해결하기 위해, 아래와 같이 const를 붙여서 해결 하였다.
+남은 문제를 해결하기 위해, 아래와 같이 const를 붙였다.
 {% highlight cpp %} 
 template<typename T, typename Arg> 
 shared_ptr<T> factory(Arg const & arg)
@@ -496,7 +496,7 @@ shared_ptr<T> factory(Arg const & arg)
 } 
 {% endhighlight %} 
 
-하지만 위와 같은 접근은 2가지 문제가 있다. 
+하지만 위와 같은 접근은 2가지 아직도 문제가 남아 있다. 
 
 1. factory 함수가 하나가 아니라 여러개의 매개변수를 갖는다면, 
 모든 non-const, const reference에 대한 조합을 오버로드 해야한다. 
@@ -505,7 +505,7 @@ shared_ptr<T> factory(Arg const & arg)
 arg가 lvalue이기 때문에 move semantics가 절대로 불가능하다. 
 
 여기서 rvalue reference가 위 2가지 문제를 푸는데 사용 될 수 있다. 
-이제 rvalue reference의 if-it-has-a-name 규칙 다음으로, 2가지 규칙을 더 살펴보자.
+문제를 풀기 위해 rvalue reference의 `if-it-has-a-name` 규칙 다음으로, 2가지 규칙을 더 살펴봐야 한다.
 
 ※ 요약 : perfect forwarding 문제란? : reference를 온전하게 전달하지 못하는 문제를 말한다.
 
@@ -516,7 +516,7 @@ arg가 lvalue이기 때문에 move semantics가 절대로 불가능하다.
 
 ### 08.Perfect Forwarding: The Solution
 
-if-it-has-a-name 규칙을 제외하고 남은 2개의 rvalue reference 규칙중에 첫번째는 `reference 축약 규칙`이다.
+`if-it-has-a-name` 규칙을 제외하고 남은 2개의 rvalue reference 규칙중에 첫번째는 `reference 축약 규칙`이다.
 
 - A& & becomes A&
 - A& && becomes A&
@@ -537,7 +537,7 @@ void foo(T&&);
 
 이러한 2가지 규칙을 감안하면, 07.Perfect Forwarding: The Problem에서 살펴본 perfect forwarding 문제를 rvalue reference를 이용해서 풀 수 있게 된다. 
 
-아래에 Perfect Forwarding 문제의 해결방법을 보여주겠다.
+아래에 Perfect Forwarding 문제의 정답을 보여주겠다.
 {% highlight cpp %}
 template<typename T, typename Arg> 
 shared_ptr<T> factory(Arg&& arg)
@@ -552,13 +552,13 @@ S&& std::forward(typename remove_reference<S>::type& a) noexcept
 }
 {% endhighlight %} 
 
-위의 perfect forwarding이 어떻게 동작하는지 보기위해, factory 함수를 lvalue로 호출 했을때 와 rvalue로 호출 했을때로 나눠서 살펴볼 것이다. 
+위의 perfect forwarding이 어떻게 동작하는지 보기위해, factory 함수를 1.lvalue로 호출 했을때 와 2.rvalue로 호출 했을때로 나눠서 살펴볼 것이다. 
 
 ------------------------------------------------------------
 
 <br>
 
-**1.우선은, `factory<A>`가 타입X의 lvalue로 호출 될 때를 살펴보자**
+**1.`factory<A>`가 타입X의 lvalue로 호출 될 때를 살펴보자**
 {% highlight cpp %}
 X x;
 factory<A>(x);
@@ -594,7 +594,7 @@ X& std::forward(X& a)
 
 <br>
 
-**2.이번에는, `factory<A>`가 타입X의 rvalue로 호출 될 때를 살펴보자**
+**2.`factory<A>`가 타입X의 rvalue로 호출 될 때를 살펴보자**
 {% highlight cpp %}
 X foo();
 factory<A>(foo());
