@@ -614,7 +614,7 @@ X&& forward(remove_reference<X>::type& a) noexcept
 {% endhighlight %} 
 
 여기에 `reference 축약 규칙`을 적용하면 아래와 같이 되고, 드디어 rvalue를 온전하게 A의 생성자에 reference로 넘길수 있게 되었다.
-게다가 A의 생성자로 전달되는 매개변수식은 rvalaue reference로 선언되어 있고 이름을 가지고 있지 않기 때문에, `if-it-has-a-name` 규칙에 따라 rvalue 이다.
+게다가 A의 생성자로 전달되는 매개변수식은 rvalaue reference로 선언되어 있고 `std::forward<X>`에 의해 이름이 숨겨져서, `if-it-has-a-name` 규칙에 따라 rvalue 이다.
 이것은 move semantics가 보장된다는 의미이다. 
 {% highlight cpp %}
 shared_ptr<A> factory(X&& arg)
