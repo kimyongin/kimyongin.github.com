@@ -421,7 +421,7 @@ X retX = foo();
 {% endhighlight %}
 
 이전처럼 가정하자, X는 copy constructor와 copy assignment operator를 move semantics로 오버로드 한것을 가지고 있다. 
-당신이 함수 정의를 본다면, "여기서 값 복사가 일어나는군, x에서 foo의 리턴값의 위치로 말이야." 라고 생각할 수 있다. 
+당신이 함수 정의를 본다면, "여기서 값 복사가 일어나는군, x에서 foo의 리턴값(retX)의 위치로 말이야." 라고 생각할 수 있다. 
 그럼 우리는 std::move를 배웠기 때문에, 값을 복사 하지 않고 이동을 시키기 위해 아래와 같이 작성 할 수 있다.
 
 {% highlight cpp %} 
@@ -614,7 +614,7 @@ X&& forward(remove_reference<X>::type& a) noexcept
 {% endhighlight %} 
 
 여기에 `reference 축약 규칙`을 적용하면 아래와 같이 되고, 드디어 rvalue를 온전하게 A의 생성자에 reference로 넘길수 있게 되었다.
-게다가 A의 생성자로 전달되는 매개변수식은 rvalaue reference로 선언되어 있고 이름을 가지고 있지 않기 때문에, 규칙에 따라 rvalue 이다.
+게다가 A의 생성자로 전달되는 매개변수식은 rvalaue reference로 선언되어 있고 이름을 가지고 있지 않기 때문에, `if-it-has-a-name` 규칙에 따라 rvalue 이다.
 이것은 move semantics가 보장된다는 의미이다. 
 {% highlight cpp %}
 shared_ptr<A> factory(X&& arg)
