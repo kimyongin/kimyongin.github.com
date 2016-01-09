@@ -16,11 +16,13 @@ template <typename> class A; // (2)
 
 (1)과 (2)에는 차이점이 있다. (1)은 template parameter의 이름을 T라고 하였고, (2)는 이름을 주지 않았다.
 (2)와 같은 코드는 문제가 있는걸까? 아니다. 왜냐하면.. template parameter에 이름을 주는것은 옵션이기 때문이다.
-왜냐하면, 만약 그 어디에서도 template parameter 이름을 사용하지 않는다면, 이름은 필요없기 때문이다. 아래의 `adder` 처럼 말이다. 
+왜 옵션이냐구? 만약 그 어디에서도 template parameter 이름을 사용하지 않는다면, 이름은 필요없기 때문이다. 아래의 `adder` 처럼 말이다. 
 
 {% highlight cpp %}
 template <typename> 
-int adder(int a) { return a++;} 
+int adder(int a) { return a++; }
+..
+int ret = adder<string>(10); 
 {% endhighlight %}
 
 <br>
@@ -135,7 +137,7 @@ Stack<int,List> aStack1; // (1) ok
 Stack<std::string,Deque> aStack2; // (2) ok
 {% endhighlight %}
 
-`Stack<int,List> aStack1;` 의 2번째 파라미터 `List`는 템플릿 클래스이다. 
+`Stack<int,List> aStack1;` 의 2번째 파라미터 `List`는 템플릿 클래스이다.  
 **다시 한번 강조해서 말하면 `타입`이 아니라 `템플릿 클래스`를 넘기고 있다.**
 
 그렇다!! 
