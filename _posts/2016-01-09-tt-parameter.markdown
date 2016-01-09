@@ -79,13 +79,15 @@ class Stack{
 };
 
 Stack<int,List> aStack1; // (1) ok
-Stack<std::string,Deque> aStack2; // (2) ok
+Stack<string,Deque> aStack2; // (2) ok
 {% endhighlight %}
 
 이제 (1),(2) 같은 보다 좋은 코드를 작성하는 것이 가능해졌다. 이 코드는 그냥 느낌적으로 보면, 그다지 어렵지 않은 코드다.
 간략하게 설명하면 "1번째 parameter로 넘어온 T가 2번째 parameter인 Container의 template parameter로 사용하고 있구나.." 정도로 이해하면 된다. 
 
-그런데 뭔가 햇갈리지 않은가? 우선 용어부터 정리해보자.
+그런데 뭔가 햇갈리지 않는가? 일단 코드부터가 헷갈리게 한다. `template <typename T, template <typename> class Container>` 보기만 해도 어지럽다.
+
+우선 용어부터 정리해보자.
  
 - 첫번째 파라미터인 T는 template parameter의 이름이다.
 - 두번째 파라미터인 Container는 template template parameter 이름이다.
@@ -101,24 +103,24 @@ template을 2번 적은건 오타가 아니다.
 
 {% highlight cpp %}
 template <typename T>
-class List1;
+class List;
 
 template <typename Container> 
-class Wrapper1{
+class Wrapper{
   //...
   Container s_;
 };
 
-Wrapper1<List1<int>> w1; // (1) fine, List<int> is a type 
-Wrapper1<List1> w2; // (2) error! List is a template          
+Wrapper<List1<int>> w1; // (1) fine, List<int> is a type 
+Wrapper<List1> w2; // (2) error! List is a template          
 {% endhighlight %}
 
 - `List<int>`는 `List` 템플릿 클래스를 `int` 타입으로 인스턴스화한 타입
 - `List`는 템플릿 클래스
 
-위 설명이 이해가 되는가? 그렇다면 (2)가 왜 에러가 나는지도 이해가 될것이다.
+위 설명이 이해가 되는가? 그렇다면 (2)에서 왜 컴파일 에러가 발생하는지도 이해가 될것이다.
 `Wrapper` 템플릿 클래스가 인스턴스화 될려면, 멤버변수인 `s_`를 어떤 타입으로 인스턴스 할지 정하는데 필요한 타입을 알려줘야 한다.
-따라서 타입을 넘기는 (1)은 정상이고, 템플릿 클래스를 넘기는 (2)는 에러가 발생하는 것이다.    
+따라서 타입을 넘기는 (1)은 컴파일이 되는 반면, 템플릿 클래스를 넘기는 (2)는 컴파일 에러가 발생하는 것이다.    
 
 다시 아래코드를 보자. 
 
@@ -134,7 +136,7 @@ Stack<std::string,Deque> aStack2; // (2) ok
 {% endhighlight %}
 
 `Stack<int,List> aStack1;` 의 2번째 파라미터 `List`는 템플릿 클래스이다. 
-다시 한번 강조해서 말하면 `타입`이 아니라 `템플릿 클래스`를 넘기고 있다.
+**다시 한번 강조해서 말하면 `타입`이 아니라 `템플릿 클래스`를 넘기고 있다.**
 
 그렇다!! 
 
