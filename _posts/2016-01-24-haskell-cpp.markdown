@@ -290,7 +290,6 @@ all pred (head:tail) = (pred head) && (all pred tail)
 패턴매칭을 사용하여, 비어있는 list라면 True가 반환되고, 비어있지 않은 list라면 head, tail로 나눠서 
 head에 함수를 실행하고, tail은 재귀호출에 사용된다. 이전에 살펴본 예제와 다른점은 함수를 함수의 매개변수로 넘길수 있는 `Higher-Order Function` 특징을 활용하여 
 `all` 함수에 `pred`라는 함수와, 그 함수의 매개변수로 사용될 요소를 가지고 있는 list를 매개변수로 넘긴것이다. 
-`all` 함수가 True를 반환하게 된다.  
 
 <br>
 
