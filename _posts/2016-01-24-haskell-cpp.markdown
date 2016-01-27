@@ -350,7 +350,7 @@ add_it elem so_far = elem + so_far
 sum_it lst = foldr add_it 0 lst
 {% endhighlight %}
 
-foldr함수는 첫번째 파라미터로 add 함수를, 두번째 파라미터로 초기값(init), 세번째 파라미터로 list를 넘긴다.
+foldr함수에 첫번째 파라미터로 add_it 함수를, 두번째 파라미터로 초기값(init:0), 세번째 파라미터로 list를 넘긴다.
 패턴매칭을 통해 list가 비어있으면 초기값을 반환하고, list가 비어있지 않으면 head, tail로 나누어서 재귀호출을 한다.
 재귀호출을 풀이하면 아래와 같다.
 
@@ -404,7 +404,7 @@ Haskell에는 list에 대한 연산을 할때 명시적인 재귀호출 없이 �
 이것은 기존의 list를 기반으로 새로운 list를 만들어내는 것이다. 이것은 `집합(set)` 에서 차용해온 것인데, 
 아마도 집합에서 다음과 같은 정의 : `S is a set of elements`를 본적이 있을텐데 바로 이것을 이용하는 것이다. 
 
-[x * x | x <- [3, 4, 5]]
+`[x * x | x <- [3, 4, 5]]`
 
 이것은 x * x 요소들의 집합을 의미하며, x는 [3,4,5]로부터 가져온다.
 이글의 초반부에 만들어본 count 예제가 기억나는가? 그것을 `List Comprehension` 을 사용하면 한줄에 작성이 가능하다.
