@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "template meta programming - ex1"
+title: "template meta programming"
 date: 2015-12-20 12:53:25
 tags: cpp
 ---

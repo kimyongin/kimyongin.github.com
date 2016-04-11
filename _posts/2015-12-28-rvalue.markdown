@@ -684,3 +684,53 @@ X&& std::move(X&& a) noexcept
 
 위 코드를 보면 알수 있듯이, 결국엔 static_cast<X&&>(x)를 호출한다. 그런데 굳이 std::move를 사용하는 이유는 
 std::move가 좀더 expressive 하기 때문이다.
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+### [EMC++ - Ch.5]
+
+- 캐스팅일 뿐..
+
+std::move와 std::forward는 런타임에 아무것도(move 혹은 forward을) 하지 않는다. 
+단순히 컴파일타임에 std::move는 무조건 rvalue로, std::forward는 조건에 따라서 캐스팅을 해줄 뿐이다. 
+여기서 캐스팅이란, 컴파일러에게 "이 객체는 move에 적합한 객체 입니다" 라고 알려주는 것이라고 생각하면 된다. 
+그러면 컴파일러는 move semantics가 오버로드된 버전을 호출하도록 해주는 것이다.
+
+- const에 대해서..
+
+아래와 같은 move semantics를 오버로드한 타입X가 있다고 하자
+{% highlight cpp %}
+class X {
+    // [...]
+    X(const X& rhs);
+    X(X&& rhs);
+};
+{% endhighlight %} 
+
+그리고 아래와 같이 호출 해보자. 어떤 생성자 함수가 호출될까?
+{% highlight cpp %}
+const X x1;
+X x2(std::move(x1)); // ??
+{% endhighlight %}
+정답은 `X(const X& rhs)` 이다. 왜냐하면 `const`를 보장해야 하기 때문이다.
+따라서 move를 하려면 const로 선언하지 말아야 한다.  
+
+
+template<typename T>
+int Func(T&& a);
+
+test(5);
+// a ==> int&& (추론)
+// type(a) == T&&
+// int&& == T&&
+// int&&/&& == T (축약)
+// int = T
+
+int a;
+test(a);
+// a ==> int& (추론)
+// type(a) == T&&
+// int& == T&&
+// int&/&& == T (축약)
+// int& = T
