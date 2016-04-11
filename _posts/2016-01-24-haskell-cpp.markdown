@@ -5,7 +5,7 @@ date: 2016-01-24 09:53:25
 tags: Haskell cpp template
 ---
 
-이 글은 아래의 원글을 읽으면서, 제가 이해한대로 다시한번 풀이해서 적어본 것입니다.
+이 글은 아래의 원글을 읽으면서, 제가 이해한대로 다시한번 풀이해서 적어본 것입니다~
 [http://bartoszmilewski.com/2009/10/21/what-does-Haskell-have-to-do-with-c/](http://bartoszmilewski.com/2009/10/21/what-does-Haskell-have-to-do-with-c/)
 
 C++ Template Meta Programming(TMP)을 이해하고 싶다면 함수형 프로그래밍에 대해서 알아야 한다. 
