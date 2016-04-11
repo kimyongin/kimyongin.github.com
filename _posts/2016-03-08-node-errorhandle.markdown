@@ -2,10 +2,10 @@
 layout: post
 title: "nodejs errors"
 date: 2016-03-08 09:53:25
-tags: rx
+tags: nodejs
 ---
 
-https://www.joyent.com/developers/node/design/errors
+원문 : [https://www.joyent.com/developers/node/design/errors](https://www.joyent.com/developers/node/design/errors)
 
 이 문서는 아래의 질문에 대한 답을 해준다.
 
@@ -26,18 +26,19 @@ https://www.joyent.com/developers/node/design/errors
 6. Summary
 7. Appendix : Conventional properties for Error objects : 올바른 방법으로 부가적인 정보를 제공하기 위해 사용되는 property들
 
-============================================================================================================================
+-----------------------------------
+-----------------------------------
+
 ### 1. Background
-============================================================================================================================
 
 여기서는 아래의 것들을 알고 있다고 가정한다.
 
 1. 우리는 javascript, java, python, c++ 같은 language의 exception handle에 익숙하다. 
 따라서 throw, catch가 무엇을 의미하는지 이미 알고 있다.
-
 2. 우리는 Node.js의 asnyc operation과 callback(err, result) pattern에 익숙하다.
 따라서 아래 code가 왜 error handle이 동작하지 않는지 알고 있다.
 
+{% highlight javascript %}
 function myApiFunc(callback)
 {
   /*
@@ -53,8 +54,10 @@ function myApiFunc(callback)
     callback(ex);
   }
 }
+{% endhighlight %}
 
 이제 우리는 error를 전달하는 3가지 방법에 익숙해져야 한다.
+
 1. throw error (making it an exception)
 2. callback에 error를 전달하는 것
 3. EventEmitter의 'error' event를 emit 하는 것
@@ -64,19 +67,19 @@ error는 Error class의 instance 이고, error를 throw하면, 그것이 excepti
 
 예를 들면..
 
-1. 아래는 error를 exception으로 사용하는 것이다.
-throw new Error('something bad happened');
-
-2. 아래는 throw없이 just error 로 사용하는 것이다. 
-callback(new Error('something bad happened'));
+1. 아래는 error를 exception으로 사용하는 것이다.   
+`throw new Error('something bad happened');`
+2. 아래는 throw없이 just error 로 사용하는 것이다.   
+`callback(new Error('something bad happened'));`
 
 Node에서는 just error로 사용하는 것이 일반적이다.
 왜냐하면 대부분의 error는 async하게 발생하기 때문이다.(exception을 handle 할수있는건 try/catch 뿐이다.)
 try/catch를 사용하는 것은 JSON.parse나 user-input validation 같은 sync operation 일때만 사용해야 한다.
 
-============================================================================================================================
+-----------------------------------
+-----------------------------------
+
 ### 2. Operational errors vs Programmer errors
-============================================================================================================================
 
 error를 아래와 같은 2가지 분류로 나누는 것은 많은 도움이 된다.
 
@@ -196,9 +199,10 @@ crash가 가장 빠른 recover 방법이다. 이방법의 유일한 단점은 �
 마지막으로 server측의 programmer error는 client측에서는 operational error 라는 것을 기억해야 한다.
 따라서 client는 server의 crash를 handle해야만 한다.  
 
-============================================================================================================================
+-----------------------------------
+-----------------------------------
+
 ### 3. Patterns for writing functions
-============================================================================================================================
 
 지금까지 error를 어떻게 handle할지에 대해서 알아보았다. 
 이제부터는 새로운 function을 작성할때 어떻게 error를 전달할지에 대해서 알아보겠다.
@@ -210,24 +214,24 @@ crash가 가장 빠른 recover 방법이다. 이방법의 유일한 단점은 �
 
 여기 3가지의 error를 전달하는 패턴이 있다.
 
-1. throw는 error를 sync하게 전달한다. 
+* 1\. throw는 error를 sync하게 전달한다. 
 이것은 function이 호출된 같은 context 에서 호출된다. 
 만약 caller에서 try/catch를 사용한다면 caller는 error를 catch 할수 있다.
 만약 caller에서 아무것도 하지 않았다면, 프로그램은 crash 된다.
 
-2. Callback은 async하게 event를 전달하는 가장 간단한 방법이다.
+* 2\. Callback은 async하게 event를 전달하는 가장 간단한 방법이다.
 caller가 callback function을 넘기면, callee는 async 작업이 완료되면 callback을 호출하는 것이다.
 일반적인 패턴은 callback(err, result) 형태이다. 그리고 작업의 결과에 따라서 error나 result 둘중에 하나만 null이 아니다.
 
-3. callback을 사용하는 대신 좀더 복잡한 방법은 EventEmitter 방식이다.
+* 3\. callback을 사용하는 대신 좀더 복잡한 방법은 EventEmitter 방식이다.
 EventEmitter object를 받은 caller는 error event를 listen 해야 한다.
 이 방식은 아래와 같은 2가지 경우에 유용하다.
 
-3.1. 복수의 error, 복수의 result를 반환하고 싶은경우, 예를 들어 db에서 data를 읽어오는데 모든 data가 준비 될때까지 기다렸다가 callback을 호출하는 것이 아니라.
+  * 3.1\. 복수의 error, 복수의 result를 반환하고 싶은경우, 예를 들어 db에서 data를 읽어오는데 모든 data가 준비 될때까지 기다렸다가 callback을 호출하는 것이 아니라.
 data가 stream으로 도착하는 즉시 row event를 발생시켜서 조금씩 준비되는대로 data를 전달하는 것이다. 
 그리고 모두 완료되면 end event를 발생시키고, 진행중에 error가 발생하면 error event를 발생시키는 것이다.
 
-3.2. object가 복잡한 state machine인 경우, 예를 들어 socket 같은 경우, connect, end, timeout, drain, close event를 가지고 있는 EventEmitter object 이다.
+  * 3.2\.  object가 복잡한 state machine인 경우, 예를 들어 socket 같은 경우, connect, end, timeout, drain, close event를 가지고 있는 EventEmitter object 이다.
 이러한 방식을 사용하는 경우, error event가 언제 발생되었는지 명확히 하는것이 중요하다.
 
 지금까지 우리는 callback과 event emitter를 async error를 전달하는데 사용하는것으로 뭉뚱그렸다.
@@ -235,6 +239,7 @@ data가 stream으로 도착하는 즉시 row event를 발생시켜서 조금씩 
 
 그렇다면.. 어떨때 throw를 사용해야 할까? 어떨때 callback을? event emitter를? 사용해야 할까?
 위 결정은 아래의 것들에 달려있다.
+
 1. error가 operational error 인가? programmer error 인가?
 2. function이 sync 한가? asnyc 한가?
 
@@ -270,6 +275,7 @@ programmer error는 절대로 handle하지 않기 때문에 위에서 말한 try
 user input에 대해서 어떻게 제약사항을 둘지는 우리의 판단에 달려있다. 
 ip address와 callback 을 넘겨받는 connect function을 호출한다고 생각해보자. 
 그리고 user가 'bob' 같은 유효하지 않은 ip address를 넘기는 경우 문서에 아래 2가지 방법중 하나를 명시할수 있다.
+
 - 문서 : ipv4형식에 맞는 문자열만 허용하며, 그 외에는 즉시 error를 throw 한다. (이 방식을 추천한다.)
 - 문서 : 어떤 문자열도 다 받으며, 만약 해당 문자열에 접속이 불가능한 경우 async하게 '해당 주소에는 접속할수 없습니다' 라는 error를 전달한다.
 
@@ -288,45 +294,49 @@ Operational error는 항상 handle 되어야 한다. 그것도 아주 명확하�
 따라서 process.on('uncaughtException')에서는 Programmer error만이 handle 되게 된다. 
 그리고 앞에서 말했듯이 Programmer error는 handle 하지 않고 즉시 crash 하게 두는 것을 추천하기 때문에 process.on('uncaughtException')은 권장하지 않는다.
 
-============================================================================================================================
+-----------------------------------
+-----------------------------------
+
 ### 4. Specific recommendations for writing new functions
-============================================================================================================================
 
 지금까지 많은 지침들을 알아봤다. 이제 좀더 디테일하게 알아보자.
 
-1. Be clear about what your function does.
+* 1\. Be clear about what your function does.
 이것은 가장 중요하다. 문서에서는 아래의 것들을 명확히 해야한다.
-- 어떤 argument를 넘겨야 하는지
-- arguemnt의 type은 무엇인지
-- 추가적인 조건(e.g. valid ip address)
+
+  - 어떤 argument를 넘겨야 하는지
+  - arguemnt의 type은 무엇인지
+  - 추가적인 조건(e.g. valid ip address)
 
 만약 문서에 어떤것을 잘못 적었거나, 빼먹었다면 그것은 programmer error 이므로 곧바로 error를 throw 해야 한다.
 
 추가적으로 아래의 것들을 문서에 넣을수 있다.
-- 어떤 operational error가 발생할수 있는지
-- operational error가 발생했을때 어떻게 처리하면 되는지
-- return 값은 무엇인지
 
-2. Use Error objects for all errors, and implement the Error contract
+  - 어떤 operational error가 발생할수 있는지
+  - operational error가 발생했을때 어떻게 처리하면 되는지
+  - return 값은 무엇인지
+
+* 2\. Use Error objects for all errors, and implement the Error contract
 모든 error는 Error Class를 사용하거나, Error Class의 subclass를 사용해야 한다. 
 그리고 name과 message properties를 넣어야 한다.
 
-3. Use the Error's name property to distinguish errors programmatically.
+* 3\. Use the Error's name property to distinguish errors programmatically.
 error의 종류가 무엇인지 확인하려면 name property를 이용하면 된다.
 새로운 name을 굳이 만들필요는 없다. 이미 많이 사용되는 이름을 그대로 사용해도 된다. 
 예를 들자면 다음과 같은 것들 말이다. "ServiceUnavailableError", "TypeError" , "RangeError"
 
-4. Augment the Error object with properties that explain details 
+* 4\. Augment the Error object with properties that explain details 
 Error를 좀더 자세하게 설명을 하려면 Property를 추가하면 된다.
 예를 들어 server에 connect하는 function이 error를 전달할때는, remoteIp : 'xxx.xxx.xxx' 같은 방식으로 property를 추가하면 된다.
 만약 시스템 에러라면 syscall : 'xxx system api' 같은 방식으로 추가하면 된다.
 
 좀더 구체화 하면.
-- name : 여러가지 종류의 error를 프로그램적으로 구별할수 있도록 사용될수 있어야 한다.
-- message : 사람이 읽고 이해할수 있는 메세지를 담고 있어야 한다.  
-- stack : 건드리지 말고 V8엔진이 만들어주는대로 사용해라.
 
-5. If you pass a lower-level error to your caller, consider wrapping it instead.
+  - name : 여러가지 종류의 error를 프로그램적으로 구별할수 있도록 사용될수 있어야 한다.
+  - message : 사람이 읽고 이해할수 있는 메세지를 담고 있어야 한다.  
+  - stack : 건드리지 말고 V8엔진이 만들어주는대로 사용해라.
+
+* 5\. If you pass a lower-level error to your caller, consider wrapping it instead.
 async funcA에서 async funcB를 호출하고, 만약 funcB에서 error가 발생하면 어떻게 해야할까?
 여러가지 방법이 있겠지만, 여기서는 funcB에서 발생한 error를 그대로 전달하기로 했다고 해보자.
 (그대로 전달 하지 않고, funcA에서 re-try 할수도 있고, 무시 하는 방법도 있다.)
@@ -336,14 +346,16 @@ wrapping 하게 된다면 low-level에서 발생한 error를 포함할 뿐만 �
 'verror'라는 모듈이 이러한 작업을 간단하게 할수 있도록 도와준다.
 
 만약 Error를 wrapping 하기로 결정했다면 아래의 것들을 고려해야 한다.
-1. 기존 error를 수정하지 않아야 한다. 이 말은 caller가 wrapping 되어있는 기존의 error를 그대로 사용할수 있어야 한다는 뜻이다.
-2. error의 name을 그대로 사용하거나, 좀더 유용한 이름을 사용해야 한다. 
-예를 들어 bottom-level의 error가 node의 plain error 라면, upper-level의 error는 'InitializationError'와 같은 형식이 될수도 있다.
-3. 기존 error의 property를 보존해야 한다.
+
+  - 기존 error를 수정하지 않아야 한다. 이 말은 caller가 wrapping 되어있는 기존의 error를 그대로 사용할수 있어야 한다는 뜻이다.
+  - error의 name을 그대로 사용하거나, 좀더 유용한 이름을 사용해야 한다. 
+  예를들어 bottom-level의 error가 node의 plain error 라면, upper-level의 error는 'InitializationError'와 같은 형식이 될수도 있다.
+  - 기존 error의 property를 보존해야 한다.
 
 참고로 Joyent(Node.js 개발사)는 'verror' 모듈을 사용한다.
 
 ### Summary
+
 1. Operational error는 예상가능하고, 피할수 없는 error 이며, Programmer error는 bug 이다.
 2. Operational error는 반드시 handle 되어야 하며, Programmer error는 handle, 혹은 recover 될수 없다.
 만약 Programmer error를 handle, recover 하려고 시도한다면, 그것은 debug를 어렵게 만들뿐이다.

@@ -5,8 +5,7 @@ date: 2015-12-28 09:53:25
 tags: cpp rvalue
 ---
 
-
-[C++ Rvalue References Explained - Thomas Becker](http://thbecker.net/articles/rvalue_references/section_01.html#section_01)
+원문 : [C++ Rvalue References Explained - Thomas Becker](http://thbecker.net/articles/rvalue_references/section_01.html#section_01)
 
 01. Introduction
 02. Move Semantics

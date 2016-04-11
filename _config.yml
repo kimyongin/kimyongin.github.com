@@ -10,5 +10,5 @@ github_username:  kimyongin
 
 # Build settings
 markdown: kramdown
-kramdown:
-input: GFM # Enable GitHub Flavored Markdown (fenced code blocks)
+#kramdown:
+#input: GFM # Enable GitHub Flavored Markdown (fenced code blocks)

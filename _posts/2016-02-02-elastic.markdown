@@ -5,7 +5,7 @@ date: 2016-02-02 09:53:25
 tags: data elasticsearch
 ---
 
-[https://www.elastic.co/guide/en/elasticsearch/guide/current/data-in-data-out.html](https://www.elastic.co/guide/en/elasticsearch/guide/current/data-in-data-out.html)
+원문 : [https://www.elastic.co/guide/en/elasticsearch/guide/current/data-in-data-out.html](https://www.elastic.co/guide/en/elasticsearch/guide/current/data-in-data-out.html)
 
 어떤 프로그램을 작성하던지, 우리는 동일한 목표를 가지고 있다.
 그건 바로 데이터를 우리의 목적에 맞게 제공하기 좋은 방식으로 구성하는 것이다.

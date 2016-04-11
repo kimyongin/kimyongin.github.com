@@ -5,7 +5,7 @@ date: 2016-01-09 09:53:25
 tags: cpp template
 ---
 
-[http://www.informit.com/articles/article.aspx?p=376878](http://www.informit.com/articles/article.aspx?p=376878)
+원문 : [http://www.informit.com/articles/article.aspx?p=376878](http://www.informit.com/articles/article.aspx?p=376878)
 
 본론에 들어가기 앞서 사전지식에 대해서 눈높이를 해보자.
 

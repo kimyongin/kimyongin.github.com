@@ -29,17 +29,20 @@ javascript의 loop는 오직 sync 하게만 동작할수 있다.
 loop를 사용해서는 async 함수를 순차적으로 실행할수 없다는 뜻이다.
 예를 들어, 아래 코드는 순서없이 response를 받게 된다.
 
+{% highlight javascript %}
 urls.forEach(function(url){
   asyncRequest(url, function(data){
     //..
   })
 })
+{% endhighlight %}
 
 결론적으로 async 프로그래밍을 마스터 하려면, 가장 우선적으로 loop없이 프로그래밍 하는 방법을 배워야 한다.
 
 -----------------------------------------------------------------------------------------------
 아래와 같은 array가 있고, 여기서 symbol만 가져오는데, 최종적으로 for문을 사용하지 말고 가져와보자.
 
+{% highlight javascript %}
 var stocks = [
   { symbol: "XFX", price: 240.22, volume: 23432 },
   { symbol: "TNZ", price: 332.19, volume: 234 },
@@ -64,9 +67,11 @@ function getStockSymbols2(stocks) {
 
 var symbols = getStockSymbols2(stocks);
 console.log(symbols);
+{% endhighlight %}
 
 여기서 map은 javascript api이며 내부적으로 아래와 비슷하게 구현되어 있다.
 
+{% highlight javascript %}
 Array.prototype.myMap = function(func){
   var results = [];  
   this.forEach(function(stock) {
@@ -74,10 +79,12 @@ Array.prototype.myMap = function(func){
   });
   return results;
 }
+{% endhighlight %}
 
 -----------------------------------------------------------------------------------------------
 이번에는 price가 150보다 높은것을 가져와보자
 
+{% highlight javascript %}
 // STEP1. forEach
 function getStocksOver1(stocks, minPrice) {
   var results = [];
@@ -97,9 +104,11 @@ function getStocksOver2(stocks, minPrice) {
 }
 
 var symbols = getStocksOver2(stocks, 150);
+{% endhighlight %}
 
 여기서도 마찬가지로 filter는 javascript api이며 내부적으로 아래와 비슷하게 구현되어 있다.
 
+{% highlight javascript %}
 Array.prototype.myFilter = function(pred){
   var results = [];  
   this.forEach(function(stock) {
@@ -109,10 +118,12 @@ Array.prototype.myFilter = function(pred){
   });
   return results;
 }
+{% endhighlight %}
 
 -----------------------------------------------------------------------------------------------
 이번에는 price가 150보다 높은것의 symbol을 가져와보자.
 
+{% highlight javascript %}
 // STEP1. forEach
 function getStocksSymbolOver1(stocks, minPrice) {
   var results = [];
@@ -134,6 +145,7 @@ function getStocksSymbolOver2(stocks, minPrice) {
       return stock.symbol;
     })
 }
+{% endhighlight %}
 
 -----------------------------------------------------------------------------------------------
 지금까지 collection을 다루는 2가지 api와 그것을 chain 해서 사용하는 방법을 배웠다.
@@ -157,11 +169,13 @@ Observable은 async하게 시간이 흘러서 event가 발생하면 item들이 �
 우선 기존의 방식대로 버튼을 만들고 click event를 listen 해보자. 
 이제 버튼을 누르면 'clicked' 라는 alert이 뜨게 된다.
 
+{% highlight javascript %}
 var button = document.getElementById('button');
 var handler = function(e) {
 	alert('clicked');
 };
 button.addEventListener('click', handler);
+{% endhighlight %}
 
 위와 같은 코드가 지금까지 우리가 event를 다루는 방법이었다.
 이제 Observable을 사용하게 되면 map, filter 등을 사용할 수 있게 되기 때문에 좀더 파워풀하게 event를 다룰수 있게 된다.
@@ -169,10 +183,12 @@ button.addEventListener('click', handler);
 아래의 코드처럼 Rx.Observable의 fromEvent를 사용하게 되면 event를 collection 처럼 다룰수 있게 되는 stream 객체를 생성할수 있다.
 그리고 위의 코드와 동일하게 버튼을 클릭하면 'clicked'라는 alert이 뜨게 된다.
 
+{% highlight javascript %}
 var clicks = Rx.Observable.fromEvent(button, 'click');
 clicks.forEach(function(e){
   alert('clicked');
 });
+{% endhighlight %}
 
 -----------------------------------------------------------------------------------------------
 이번에는 'clicked'대신 버튼을 클릭한 좌표를 띄워보자.
@@ -181,13 +197,16 @@ clicks.forEach(function(e){
 위에서 살펴봤듯이. map은 어떤 collection으로 다른 새로운 collection을 만들때 사용한다.
 예를 들어 아래코드는 [1,2,3]으로 [2,3,4]를 만들어서 출력하게 된다. 
 
+{% highlight javascript %}
 var result = [1,2,3].map(function(i){
   return i + 1;
 });
 console.log(result);
+{% endhighlight %}
 
 이제 map을 이용해서 clicks stream의 event object를 point object로 바꿔보자.
           
+{% highlight javascript %}
 var clicks = Rx.Observable.fromEvent(button, 'click');
 clicks.map(function(e) {
   return {x: e.clientX, y: e.clientY};
@@ -195,16 +214,19 @@ clicks.map(function(e) {
 .forEach(function onNext(point) {
   alert('clicked:' + JSON.stringify(point));
 });
+{% endhighlight %}
 
 여기서 한가지 알아야 할것이 있는데,
 그것은 바로 observable은 lazy 하다는 것이다.
 
 만약 위 코드를 아래와 같이 forEach를 빼고 바꾸면 어떻게 될까?
 
+{% highlight javascript %}
 var clicks = Rx.Observable.fromEvent(button, 'click');
 clicks.map(function(e) {
   return {x: e.clientX, y: e.clientY};
 })
+{% endhighlight %}
 
 alert이 안뜰 뿐, map이 동작해서 event object가 point object로 바뀔까?
 아니다. 실제동작은 아직 forEach를 호출하지 않았기 때문에, 
@@ -215,6 +237,7 @@ Observable.fromEvent로 event를 listen하는것 조차 하고 있지 않는다.
 이번에는 filter를 사용해보자.
 아래 코드는 버튼을 더블클릭 했을때 alert을 띄운다.
 
+{% highlight javascript %}
 var clicks = Rx.Observable.fromEvent(button, 'click');
 clicks
 .buffer(function(){
@@ -229,10 +252,12 @@ clicks
 .forEach(function onNext() {
   alert('double clicked');
 });
+{% endhighlight %}
 
 -----------------------------------------------------------------------------------------------
 이번에는 wiki를 이용한 연관 키워드를 보여주는 프로그램을 만들어보자.
 
+{% highlight javascript %}
 var $input = $('#input');
 var $results = $('#results');
 
@@ -263,6 +288,7 @@ var keyups = Rx.Observable.fromEvent($input, 'keyup')
     $results.empty();
     $.each(data[1], (_, value) => $('<li>' + value + '</li>').appendTo($results));
 });
+{% endhighlight %}
 
 만약.. 위 프로그램을 observable을 사용하지 않고 async하게 작성 한다고 해보자.
 아마도 훨씬 많고 복잡한 코딩을 해야 할 것이다.
@@ -275,6 +301,7 @@ https://jsbin.com/zuhoxef/1/edit?html,js,output
 
 우선 아래와 같은 일반 array를 사용한 코드를 보자. 
 
+{% highlight javascript %}
 try{
   [1,2,3].forEach(function(i) {
     console.log(i);
@@ -284,12 +311,15 @@ try{
 }catch(e) {
   console.log('error');
 }
+{% endhighlight %}
+
   
 1, 2, 3, 'done'이 순서대로 출력할것이다. 
 그리고 forEach 안의 throw의 주석을 없애면 1, 'error' 가 출력 될 것이다.
 
 그럼 이제 Observable로 똑같이 작성해보자.
 
+{% highlight javascript %}
 try{
   clicks.forEach(function(e){
     alert('clicked');
@@ -299,6 +329,7 @@ try{
 }catch(e) {
   console.log('error');
 }
+{% endhighlight %}
  
 이제 버튼을 누르면 어떻게 될까?
 'clicked' alert이 뜨고 'done'이 콘솔에 출력될까?
@@ -314,6 +345,7 @@ throw 주석을 해제하고 버튼을 클릭하면 catch에 잡히지 않는다
 그래서 Observable에서는 이를 해결하기 위해
 아래와 같이 2개의 추가적인 콜백을 넘겨받는다.
 
+{% highlight javascript %}
 clicks.forEach(
   function onNext(e) {
     alert('clicked');
@@ -324,6 +356,7 @@ clicks.forEach(
   function onCompleted() {
     console.log("done");
   });
+  {% endhighlight %}
 
 이로써 async하게 발생하는 error를 처리할수 있게 되었고, 
 버튼을 클릭하는 event stream이 끝나게 되면 'done'이 호출되게 된다.

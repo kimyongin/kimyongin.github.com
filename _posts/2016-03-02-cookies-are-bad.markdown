@@ -2,10 +2,10 @@
 layout: post
 title: "cookies"
 date: 2016-03-02 09:53:25
-tags: rx
+tags: cookies
 ---
 
-http://sitr.us/2011/08/26/cookies-are-bad-for-you.html
+원문 : [http://sitr.us/2011/08/26/cookies-are-bad-for-you.html](http://sitr.us/2011/08/26/cookies-are-bad-for-you.html)
 
 쿠키는 여러모로 취약하다. 그래서 OAuth를 써야 한다.
 
@@ -88,11 +88,12 @@ MITM, XSS는 HTTP Secure와 HttpOnly flag로 해결할수 있다. 하지만 CSRF
 그리고 여기서는 OAuth 2.0에 대해서 설명하려고 한다.
 
 OAuth는 아래와 같이 구성된다.
+
 1. 인증 서버
 2. 리소스 소유자
 3. 클라이언트 
 
- 
+... 
 
 
 
